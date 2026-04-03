@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐱 Meow — Cat Brain AI</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(135deg, #fce4ec, #f3e5f5, #e8eaf6);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  color: #333;
+  transition: background 1s ease;
+}
+
+body.dawn { background: linear-gradient(135deg, #ffe0b2, #ffccbc, #fff3e0); }
+body.morning { background: linear-gradient(135deg, #fce4ec, #f3e5f5, #e8eaf6); }
+body.afternoon { background: linear-gradient(135deg, #fff9c4, #ffe0b2, #ffecb3); }
+body.evening { background: linear-gradient(135deg, #f3e5f5, #e1bee7, #ce93d8); }
+body.night { background: linear-gradient(135deg, #283593, #1a237e, #311b92); color: #e0e0e0; }
+body.late_night { background: linear-gradient(135deg, #0d0d2b, #1a1a40, #16213e); color: #bbb; }
+
+body.night .room { background: linear-gradient(180deg, #1a237e 0%, #283593 55%, #37474f 55.5%, #263238 100%); border-color: #455a64; }
+body.late_night .room { background: linear-gradient(180deg, #0d0d2b 0%, #1a1a40 55%, #212121 55.5%, #121212 100%); border-color: #333; }
+body.night .stat-card, body.late_night .stat-card { background: rgba(255,255,255,0.1); }
+body.night .room-speech, body.late_night .room-speech { background: rgba(255,255,255,0.15); color: #e0e0e0; }
+body.night .room-speech::after, body.late_night .room-speech::after { border-top-color: rgba(255,255,255,0.15); }
+body.night .stat-label, body.late_night .stat-label { color: #aaa; }
+body.night .card-rel, body.late_night .card-rel { color: #888; }
+body.night .hint, body.late_night .hint { color: #666; }
+body.night .stat-card.selected, body.late_night .stat-card.selected { border-color: #ff4081; }
+body.night .room-cat.selected .cat-area, body.late_night .room-cat.selected .cat-area { filter: drop-shadow(0 0 6px rgba(255,64,129,0.5)); }
+
+h1 {
+  font-size: 1.8em;
+  margin-bottom: 3px;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle { font-size: 0.85em; color: #888; margin-bottom: 8px; }
+
+.time-badge {
+  background: rgba(255,255,255,0.6);
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.82em;
+  margin-bottom: 8px;
+  backdrop-filter: blur(10px);
+}
+
+/* ===== ROOM ===== */
+.room {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  height: 340px;
+  background: linear-gradient(180deg, #fff8e1 0%, #ffecb3 55%, #d7ccc8 55.5%, #bcaaa4 100%);
+  border-radius: 16px;
+  border: 2px solid #d7ccc8;
+  overflow: hidden;
+  margin: 0 auto 8px;
+}
+
+.room-deco {
+  position: absolute;
+  font-size: 1.6em;
+  z-index: 1;
+  opacity: 0.7;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ===== ROOM CAT ===== */
+.room-cat {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  transition: left 1.5s ease-in-out, top 1.5s ease-in-out;
+  cursor: pointer;
+  z-index: 2;
+  --cat-main: #ff9800;
+  --cat-dark: #e65100;
+  --cat-light: #ffb74d;
+}
+.room-cat.gray {
+  --cat-main: #9e9e9e;
+  --cat-dark: #616161;
+  --cat-light: #bdbdbd;
+}
+
+.room-cat.selected .cat-area {
+  filter: drop-shadow(0 0 6px rgba(233,30,99,0.4));
+}
+
+.room-cat .cat-area {
+  position: absolute;
+  width: 200px;
+  height: 210px;
+  bottom: 5px;
+  left: -100px;
+  transform: scale(0.5);
+  transform-origin: bottom center;
+  pointer-events: none;
+  transition: filter 0.3s;
+}
+
+/* Floating speech bubble */
+.room-speech {
+  position: absolute;
+  bottom: 78px;
+  left: 0;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 12px;
+  padding: 5px 10px;
+  font-size: 0.7em;
+  max-width: 160px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.room-speech.visible { opacity: 1; }
+.room-speech::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top: 6px solid white;
+}
+
+/* Cat name tag */
+.cat-tag {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 0.65em;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--cat-main);
+  color: white;
+  padding: 1px 8px;
+  border-radius: 8px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Walking bounce */
+.room-cat.walking .cat-area {
+  animation: walkBounce 0.3s ease infinite;
+}
+@keyframes walkBounce {
+  0%, 100% { transform: scale(0.5) translateY(0); }
+  50% { transform: scale(0.5) translateY(-6px); }
+}
+
+/* ===== CAT BODY ===== */
+.cat {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.5s ease;
+}
+
+.cat-body {
+  width: 110px;
+  height: 90px;
+  background: var(--cat-main);
+  border-radius: 50% 50% 45% 45%;
+  position: relative;
+}
+
+.cat-body::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 18px;
+  width: 74px;
+  height: 5px;
+  background: var(--cat-dark);
+  border-radius: 3px;
+  box-shadow: 0 14px 0 var(--cat-dark), 0 28px 0 var(--cat-dark);
+}
+
+.ear {
+  position: absolute;
+  top: -18px;
+  width: 0; height: 0;
+  border-left: 16px solid transparent;
+  border-right: 16px solid transparent;
+  border-bottom: 28px solid var(--cat-main);
+}
+.ear-left { left: 8px; }
+.ear-right { right: 8px; }
+.ear::after {
+  content: '';
+  position: absolute;
+  top: 9px; left: -7px;
+  width: 0; height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 14px solid var(--cat-light);
+}
+
+.eyes {
+  position: absolute;
+  top: 28px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 22px;
+}
+.eye {
+  width: 20px; height: 20px;
+  background: white;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+}
+.pupil {
+  width: 11px; height: 13px;
+  background: #333;
+  border-radius: 50%;
+  position: absolute;
+  top: 4px; left: 5px;
+  transition: all 0.3s ease;
+}
+.pupil::after {
+  content: '';
+  width: 4px; height: 4px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px; left: 2px;
+}
+
+.nose {
+  position: absolute;
+  top: 50px; left: 50%;
+  transform: translateX(-50%);
+  width: 9px; height: 6px;
+  background: #e91e63;
+  border-radius: 50% 50% 40% 40%;
+}
+.mouth {
+  position: absolute;
+  top: 54px; left: 50%;
+  transform: translateX(-50%);
+  width: 18px; height: 9px;
+  border-bottom: 2px solid #795548;
+  border-radius: 0 0 50% 50%;
+}
+
+.whiskers { position: absolute; top: 48px; width: 100%; }
+.whisker {
+  position: absolute;
+  width: 30px; height: 2px;
+  background: #795548;
+  border-radius: 1px;
+}
+.whisker-l1 { left: -12px; top: 0; transform: rotate(-10deg); }
+.whisker-l2 { left: -14px; top: 7px; transform: rotate(5deg); }
+.whisker-r1 { right: -12px; top: 0; transform: rotate(10deg); }
+.whisker-r2 { right: -14px; top: 7px; transform: rotate(-5deg); }
+
+.tail {
+  position: absolute;
+  bottom: 25px; right: -22px;
+  width: 45px; height: 55px;
+  border-right: 7px solid var(--cat-main);
+  border-top: 7px solid var(--cat-main);
+  border-radius: 0 45px 0 0;
+  animation: tailWag 2s ease-in-out infinite;
+}
+@keyframes tailWag {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(15deg); }
+}
+
+.paws {
+  position: absolute;
+  bottom: -7px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 26px;
+}
+.paw {
+  width: 20px; height: 10px;
+  background: var(--cat-light);
+  border-radius: 50%;
+}
+
+/* ===== MOOD ANIMATIONS ===== */
+.cat.happy .tail { animation: tailWag 1s ease-in-out infinite; }
+.cat.happy { animation: bounce 1s ease infinite; }
+@keyframes bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-8px); }
+}
+
+.cat.playful { animation: playfulBounce 0.6s ease infinite; }
+@keyframes playfulBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+  25% { transform: translateX(-50%) translateY(-12px) rotate(-5deg); }
+  75% { transform: translateX(-50%) translateY(-8px) rotate(5deg); }
+}
+
+.cat.sleepy .eye { height: 5px; }
+.cat.sleepy .pupil { display: none; }
+.cat.sleepy { animation: sleepyNod 3s ease-in-out infinite; }
+@keyframes sleepyNod {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(5px); }
+}
+
+.cat.hungry .pupil { width: 14px; height: 14px; top: 3px; left: 3px; }
+.cat.hungry { animation: hungryShake 0.5s ease infinite; }
+@keyframes hungryShake {
+  0%, 100% { transform: translateX(-50%); }
+  25% { transform: translateX(calc(-50% - 3px)); }
+  75% { transform: translateX(calc(-50% + 3px)); }
+}
+
+.cat.annoyed .ear-left { transform: rotate(-20deg); }
+.cat.annoyed .ear-right { transform: rotate(20deg); }
+.cat.annoyed .pupil { width: 5px; height: 16px; top: 2px; left: 8px; }
+.cat.annoyed .tail { animation: tailFlick 0.4s ease infinite; }
+@keyframes tailFlick {
+  0%, 100% { transform: rotate(-20deg); }
+  50% { transform: rotate(30deg); }
+}
+
+.cat.curious .pupil { width: 14px; height: 14px; top: 3px; left: 3px; }
+.cat.curious { animation: curiousTilt 2s ease-in-out infinite; }
+@keyframes curiousTilt {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  50% { transform: translateX(-50%) rotate(10deg); }
+}
+
+.cat.scared .pupil { width: 16px; height: 16px; top: 2px; left: 2px; }
+.cat.scared .ear-left { transform: rotate(-25deg); }
+.cat.scared .ear-right { transform: rotate(25deg); }
+.cat.scared { animation: scaredShake 0.2s ease infinite; }
+@keyframes scaredShake {
+  0%, 100% { transform: translateX(-50%); }
+  25% { transform: translateX(calc(-50% - 4px)); }
+  75% { transform: translateX(calc(-50% + 4px)); }
+}
+
+.cat.relaxed .eye { height: 8px; }
+.cat.relaxed .pupil { width: 8px; height: 6px; top: 1px; left: 6px; }
+.cat.relaxed .tail { animation: tailWag 3s ease-in-out infinite; }
+.cat.relaxed { animation: relaxedBreath 3s ease-in-out infinite; }
+@keyframes relaxedBreath {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.02); }
+}
+
+.zzz {
+  position: absolute;
+  top: 0; right: 8px;
+  font-size: 1.3em;
+  opacity: 0;
+  display: none;
+}
+.cat.sleepy .zzz {
+  display: block;
+  animation: floatUp 2s ease-in-out infinite;
+}
+@keyframes floatUp {
+  0% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-25px); }
+}
+
+/* ===== STATS ROW ===== */
+.stats-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto 6px;
+}
+
+.stat-card {
+  flex: 1;
+  max-width: 290px;
+  background: white;
+  border-radius: 14px;
+  padding: 8px 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+.stat-card.selected { border-color: #e91e63; }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+.cat-dot-sm {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.card-name { font-weight: 600; font-size: 0.85em; }
+.card-mood { font-size: 0.8em; margin-left: auto; }
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  margin: 3px 0;
+}
+.stat-icon { width: 18px; text-align: center; font-size: 0.75em; }
+.stat-label { width: 42px; color: #666; font-size: 0.7em; }
+.stat-bar {
+  flex: 1;
+  height: 7px;
+  background: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-left: 3px;
+}
+.stat-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.stat-hunger .stat-fill { background: linear-gradient(90deg, #4caf50, #ff9800); }
+.stat-energy .stat-fill { background: linear-gradient(90deg, #ff5722, #ffeb3b); }
+.stat-happiness .stat-fill { background: linear-gradient(90deg, #9e9e9e, #e91e63); }
+.stat-curiosity .stat-fill { background: linear-gradient(90deg, #607d8b, #03a9f4); }
+.stat-bond .stat-fill { background: linear-gradient(90deg, #bdbdbd, #e91e63); }
+.stat-stress .stat-fill { background: linear-gradient(90deg, #66bb6a, #f44336); }
+.stat-trust .stat-fill { background: linear-gradient(90deg, #bdbdbd, #7c4dff); }
+.stat-comfort .stat-fill { background: linear-gradient(90deg, #90a4ae, #ffab40); }
+
+.personality-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-top: 3px;
+}
+.personality-tag {
+  font-size: 0.6em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.06);
+  color: #666;
+}
+
+.card-rel {
+  text-align: center;
+  font-size: 0.7em;
+  color: #999;
+  margin-top: 3px;
+}
+
+/* ===== BUTTONS ===== */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 6px auto;
+  max-width: 420px;
+}
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 22px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+.btn:active { transform: translateY(0); }
+.btn.disabled { opacity: 0.35; pointer-events: none; }
+
+.btn-feed { background: linear-gradient(135deg, #ff9800, #ff5722); color: white; }
+.btn-pet { background: linear-gradient(135deg, #e91e63, #ad1457); color: white; }
+.btn-play { background: linear-gradient(135deg, #2196f3, #1565c0); color: white; }
+.btn-talk { background: linear-gradient(135deg, #9c27b0, #6a1b9a); color: white; }
+.btn-wait { background: linear-gradient(135deg, #607d8b, #455a64); color: white; }
+
+.hint { font-size: 0.72em; color: #aaa; margin-bottom: 4px; }
+.footer { margin-top: 10px; font-size: 0.72em; color: #bbb; }
+.footer a { color: #e91e63; text-decoration: none; }
+
+.lang-switcher {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+  z-index: 100;
+}
+.lang-btn {
+  padding: 4px 10px;
+  border: 1.5px solid rgba(0,0,0,0.15);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(8px);
+  font-size: 0.72em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  color: #555;
+}
+.lang-btn:hover { background: rgba(255,255,255,0.9); }
+.lang-btn.active { background: #e91e63; color: white; border-color: #e91e63; }
+body.night .lang-btn, body.late_night .lang-btn { background: rgba(255,255,255,0.15); color: #ccc; border-color: rgba(255,255,255,0.2); }
+body.night .lang-btn.active, body.late_night .lang-btn.active { background: #e91e63; color: white; }
+
+@media (max-width: 480px) {
+  .room { height: 280px; }
+  .stats-row { flex-direction: column; align-items: center; }
+  .stat-card { max-width: 320px; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="lang-switcher">
+  <button class="lang-btn active" onclick="setLang('th')">TH</button>
+  <button class="lang-btn" onclick="setLang('en')">EN</button>
+  <button class="lang-btn" onclick="setLang('ko')">KO</button>
+</div>
+
+<h1>🐱 Cat Brain AI</h1>
+<p class="subtitle" id="subtitle">Virtual Pet with a Mind — powered by ML</p>
+<div class="time-badge" id="time-badge">☀️ เช้า</div>
+
+<!-- Room -->
+<div class="room" id="room">
+  <div class="room-deco" style="left:8%;top:60%">🍖</div>
+  <div class="room-deco" style="left:83%;top:18%">🛏️</div>
+  <div class="room-deco" style="left:46%;top:1%">🪟</div>
+  <div class="room-deco" style="left:46%;top:86%;font-size:1.3em">🧑</div>
+
+  <!-- Cat 0: ส้ม -->
+  <div class="room-cat selected" id="room-cat-0" onclick="selectCat(0)" style="left:30%;top:55%">
+    <div class="room-speech visible" id="speech-0"></div>
+    <div class="cat-area">
+      <div class="cat content" id="cat-0">
+        <div class="zzz">💤</div>
+        <div class="cat-body">
+          <div class="ear ear-left"></div>
+          <div class="ear ear-right"></div>
+          <div class="eyes">
+            <div class="eye"><div class="pupil"></div></div>
+            <div class="eye"><div class="pupil"></div></div>
+          </div>
+          <div class="nose"></div>
+          <div class="mouth"></div>
+          <div class="whiskers">
+            <div class="whisker whisker-l1"></div>
+            <div class="whisker whisker-l2"></div>
+            <div class="whisker whisker-r1"></div>
+            <div class="whisker whisker-r2"></div>
+          </div>
+        </div>
+        <div class="tail"></div>
+        <div class="paws"><div class="paw"></div><div class="paw"></div></div>
+      </div>
+    </div>
+    <div class="cat-tag">ส้ม</div>
+  </div>
+
+  <!-- Cat 1: เทา -->
+  <div class="room-cat gray" id="room-cat-1" onclick="selectCat(1)" style="left:70%;top:45%">
+    <div class="room-speech visible" id="speech-1"></div>
+    <div class="cat-area">
+      <div class="cat content" id="cat-1">
+        <div class="zzz">💤</div>
+        <div class="cat-body">
+          <div class="ear ear-left"></div>
+          <div class="ear ear-right"></div>
+          <div class="eyes">
+            <div class="eye"><div class="pupil"></div></div>
+            <div class="eye"><div class="pupil"></div></div>
+          </div>
+          <div class="nose"></div>
+          <div class="mouth"></div>
+          <div class="whiskers">
+            <div class="whisker whisker-l1"></div>
+            <div class="whisker whisker-l2"></div>
+            <div class="whisker whisker-r1"></div>
+            <div class="whisker whisker-r2"></div>
+          </div>
+        </div>
+        <div class="tail"></div>
+        <div class="paws"><div class="paw"></div><div class="paw"></div></div>
+      </div>
+    </div>
+    <div class="cat-tag">เทา</div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card selected" id="stat-card-0" onclick="selectCat(0)">
+    <div class="card-header">
+      <span class="cat-dot-sm" style="background:#ff9800"></span>
+      <span class="card-name" id="cat-name-0">Som</span>
+      <span class="card-mood" id="mood-0">😌 Content</span>
+    </div>
+    <div class="stat-row stat-hunger">
+      <span class="stat-icon">🍖</span><span class="stat-label" id="lbl-hunger-0">Hunger</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-hunger-0" style="width:30%"></div></div>
+    </div>
+    <div class="stat-row stat-energy">
+      <span class="stat-icon">⚡</span><span class="stat-label" id="lbl-energy-0">Energy</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-energy-0" style="width:80%"></div></div>
+    </div>
+    <div class="stat-row stat-happiness">
+      <span class="stat-icon">💖</span><span class="stat-label" id="lbl-happiness-0">Happy</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-happiness-0" style="width:50%"></div></div>
+    </div>
+    <div class="stat-row stat-curiosity">
+      <span class="stat-icon">🔍</span><span class="stat-label" id="lbl-curiosity-0">Curious</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-curiosity-0" style="width:50%"></div></div>
+    </div>
+    <div class="stat-row stat-bond">
+      <span class="stat-icon">❤️</span><span class="stat-label" id="lbl-bond-0">Bond</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-bond-0" style="width:10%"></div></div>
+    </div>
+    <div class="stat-row stat-stress">
+      <span class="stat-icon">😰</span><span class="stat-label" id="lbl-stress-0">Stress</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-stress-0" style="width:10%"></div></div>
+    </div>
+    <div class="stat-row stat-trust">
+      <span class="stat-icon">🤝</span><span class="stat-label" id="lbl-trust-0">Trust</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-trust-0" style="width:20%"></div></div>
+    </div>
+    <div class="stat-row stat-comfort">
+      <span class="stat-icon">🛋️</span><span class="stat-label" id="lbl-comfort-0">Comfort</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-comfort-0" style="width:50%"></div></div>
+    </div>
+    <div class="personality-row" id="personality-0"></div>
+    <div class="card-rel" id="relationship-0">0 times</div>
+  </div>
+
+  <div class="stat-card" id="stat-card-1" onclick="selectCat(1)">
+    <div class="card-header">
+      <span class="cat-dot-sm" style="background:#9e9e9e"></span>
+      <span class="card-name" id="cat-name-1">Tao</span>
+      <span class="card-mood" id="mood-1">😌 Content</span>
+    </div>
+    <div class="stat-row stat-hunger">
+      <span class="stat-icon">🍖</span><span class="stat-label" id="lbl-hunger-1">Hunger</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-hunger-1" style="width:30%"></div></div>
+    </div>
+    <div class="stat-row stat-energy">
+      <span class="stat-icon">⚡</span><span class="stat-label" id="lbl-energy-1">Energy</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-energy-1" style="width:60%"></div></div>
+    </div>
+    <div class="stat-row stat-happiness">
+      <span class="stat-icon">💖</span><span class="stat-label" id="lbl-happiness-1">Happy</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-happiness-1" style="width:60%"></div></div>
+    </div>
+    <div class="stat-row stat-curiosity">
+      <span class="stat-icon">🔍</span><span class="stat-label" id="lbl-curiosity-1">Curious</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-curiosity-1" style="width:70%"></div></div>
+    </div>
+    <div class="stat-row stat-bond">
+      <span class="stat-icon">❤️</span><span class="stat-label" id="lbl-bond-1">Bond</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-bond-1" style="width:10%"></div></div>
+    </div>
+    <div class="stat-row stat-stress">
+      <span class="stat-icon">😰</span><span class="stat-label" id="lbl-stress-1">Stress</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-stress-1" style="width:10%"></div></div>
+    </div>
+    <div class="stat-row stat-trust">
+      <span class="stat-icon">🤝</span><span class="stat-label" id="lbl-trust-1">Trust</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-trust-1" style="width:20%"></div></div>
+    </div>
+    <div class="stat-row stat-comfort">
+      <span class="stat-icon">🛋️</span><span class="stat-label" id="lbl-comfort-1">Comfort</span>
+      <div class="stat-bar"><div class="stat-fill" id="bar-comfort-1" style="width:50%"></div></div>
+    </div>
+    <div class="personality-row" id="personality-1"></div>
+    <div class="card-rel" id="relationship-1">0 times</div>
+  </div>
+</div>
+
+<p class="hint" id="hint">💡 กดเลือกแมวในห้อง แล้วใช้ปุ่มด้านล่าง</p>
+
+<div class="buttons">
+  <button class="btn btn-feed" id="btn-feed" onclick="doAction('feed')">🍖 ให้อาหาร</button>
+  <button class="btn btn-pet" id="btn-pet" onclick="doAction('pet')">🤚 ลูบหัว</button>
+  <button class="btn btn-play" id="btn-play" onclick="doAction('play')">🧶 เล่นด้วย</button>
+  <button class="btn btn-talk" id="btn-talk" onclick="doAction('talk')">💬 พูดคุย</button>
+  <button class="btn btn-wait" id="btn-wait" onclick="doAction('wait')">⏳ รอดู</button>
+</div>
+
+<p class="footer">
+  🧠 ML Brain (DQN) •
+  <a href="https://github.com/sevenuphome/meow" target="_blank">GitHub</a>
+</p>
+
+<script>
+// ===== DQN WEIGHTS (embedded) =====
+const DQN_WEIGHTS = {"q_net.0.weight":[[0.2700496017932892,0.2538115978240967,0.36269402503967285,0.20570841431617737,0.09459179639816284,-0.05056532472372055,-0.20595411956310272,0.24518224596977234,0.6738672852516174,0.2663573622703552,0.046405237168073654,0.30157285928726196],[0.6238129138946533,0.6041285991668701,-0.10204920172691345,0.14137673377990723,0.10501867532730103,0.30250632762908936,0.26685959100723267,0.06874854862689972,-0.5618172883987427,0.28808528184890747,0.10245788097381592,0.03869146481156349],[0.11184117197990417,0.2519526481628418,0.005648410879075527,0.05974262207746506,0.18432354927062988,-0.11309898644685745,0.2794579267501831,0.03842214122414589,0.3861823081970215,-0.13021619617938995,-0.01935964822769165,0.22287659347057343],[0.03695463389158249,-0.3090110421180725,0.43552902340888977,-0.16878807544708252,0.1381578892469406,-0.02989400178194046,0.06063338369131088,0.2674069106578827,0.45052802562713623,0.1014639362692833,-0.0590592622756958,-0.1045309379696846],[0.37888920307159424,0.11729307472705841,0.15065671503543854,-0.16495577991008759,0.2656930088996887,-0.09393325448036194,-0.2541080713272095,0.06700563430786133,0.45838066935539246,0.22363393008708954,0.15838496387004852,-0.19881924986839294],[-0.20747162401676178,0.023998769000172615,-0.07888123393058777,-0.2264758199453354,0.2856241762638092,-0.027453947812318802,-0.12347614020109177,-0.021219491958618164,0.020357932895421982,-0.024712178856134415,-0.17094554007053375,0.044796254485845566],[0.0527496300637722,-0.2331501841545105,0.06021330878138542,0.24343229830265045,0.08457069098949432,-0.07015835493803024,-0.2181040644645691,-0.18406574428081512,-0.07526056468486786,-0.28362196683883667,-0.17855192720890045,0.13931281864643097],[0.37548384070396423,0.41681915521621704,-0.09700798243284225,-0.2967360317707062,-0.20570644736289978,-0.17836615443229675,0.11073460429906845,0.3201400935649872,0.316291481256485,-0.040563832968473434,0.2973777651786804,-0.17758220434188843],[-0.13623328506946564,0.680469274520874,0.16807310283184052,0.24510078132152557,-0.09367767721414566,-0.0788426399230957,0.2299647331237793,-0.005892903544008732,0.3921005129814148,-0.1610170155763626,0.015449151396751404,0.16993089020252228],[-0.07221017777919769,0.23648563027381897,-0.11432884633541107,0.03751974552869797,-0.055550552904605865,-0.13032259047031403,0.03843247517943382,-0.26041847467422485,-0.2775680422782898,-0.13247789442539215,-0.05214730277657509,0.05932394415140152],[-0.1030542403459549,0.5202616453170776,0.34628456830978394,0.2607610821723938,0.18812532722949982,0.14294081926345825,-0.03481174260377884,-0.11074642837047577,0.6823447942733765,0.1919977366924286,0.15336403250694275,-0.11686777323484421],[0.3561210036277771,0.3154415488243103,0.4853983521461487,0.1509610116481781,0.23005551099777222,-0.06337098032236099,0.07583998888731003,0.058590229600667953,0.8877544403076172,0.20153120160102844,-0.18245038390159607,0.05451453849673271],[0.10134893655776978,0.7149861454963684,0.2019549161195755,-0.21200497448444366,-0.16772525012493134,-0.20257136225700378,0.2757425010204315,-0.1512981653213501,0.8330719470977783,0.036199264228343964,-0.09907399117946625,0.25149086117744446],[-0.12386979162693024,-0.856188952922821,0.31684648990631104,0.1700015515089035,0.08407405763864517,-0.2781358063220978,-0.18673251569271088,-0.15611717104911804,-0.15806256234645844,-0.28840363025665283,-0.3162807822227478,0.07444536685943604],[-0.03825591132044792,-0.4624379575252533,-0.011183271184563637,-0.04540454223752022,0.24701549112796783,-0.15558452904224396,-0.17742687463760376,-0.17786937952041626,0.6375115513801575,0.24900536239147186,0.012301119975745678,0.011210795491933823],[0.2375846803188324,0.6537376642227173,0.014274295419454575,0.02446937747299671,-0.01250632107257843,0.19879938662052155,0.07788260281085968,0.020246073603630066,0.6356697082519531,0.23804263770580292,-0.04356326907873154,-0.2612556219100952],[-0.10807233303785324,-0.8325806260108948,0.2830658257007599,-0.21355102956295013,0.173116073012352,-0.2828226387500763,-0.18721769750118256,-0.17094571888446808,-0.015042456798255444,-0.0624835342168808,0.003759140847250819,-0.07259950786828995],[-0.2170765995979309,0.10386179387569427,-0.12457913905382156,0.09829047322273254,0.10798176378011703,0.2593609392642975,-0.09938845038414001,-0.2809794843196869,-0.1838141530752182,-0.16155588626861572,0.019998732954263687,0.06606702506542206],[-0.11399180442094803,0.6861749291419983,-0.04146531969308853,0.05180242657661438,0.1156417578458786,-0.22616170346736908,-0.04976692423224449,0.32765471935272217,0.5621269941329956,-0.024798784404993057,-0.15460065007209778,0.175789475440979],[-0.07640604674816132,-0.14427880942821503,0.4619019031524658,0.2309318482875824,-0.22666314244270325,0.3174237608909607,0.15193825960159302,0.15633141994476318,0.6486281156539917,0.2150188684463501,-0.12923434376716614,-0.05365510657429695],[0.07318770885467529,-0.028746042400598526,-0.13874797523021698,-0.19601839780807495,0.19616562128067017,0.1896030753850937,-0.12929974496364594,-0.020056752488017082,0.05859934911131859,0.21270304918289185,0.005976016167551279,-0.049894023686647415],[0.14800789952278137,0.12172810733318329,0.10569377988576889,-0.23487398028373718,0.09935605525970459,-0.06905408203601837,0.036585934460163116,0.161977618932724,0.831217348575592,0.05057995393872261,-0.13499484956264496,-0.11415252089500427],[-0.025896785780787468,0.7161263227462769,0.027274837717413902,-0.06491003185510635,0.006065438501536846,-0.2994770109653473,-0.2451104372739792,0.3390166461467743,0.6615875959396362,0.3260554075241089,-0.18987619876861572,0.1504240483045578],[0.4248870313167572,0.7531931400299072,0.07688657194375992,0.31845128536224365,-0.2014636993408203,0.11744645982980728,-0.05987154692411423,0.02050621435046196,0.972025990486145,-0.15437628328800201,0.2942104637622833,0.07437540590763092],[0.24761727452278137,0.07015819847583771,0.020987875759601593,0.004647969733923674,-0.1830427050590515,0.02110382355749607,-0.22275932133197784,0.12243624776601791,0.8744735717773438,0.157364621758461,0.27761444449424744,-0.2102455049753189],[0.07259060442447662,0.12316816300153732,0.2664853036403656,-0.04399523511528969,0.3244558274745941,-0.008463387377560139,0.14125695824623108,-0.2389393150806427,0.7474049925804138,0.28888770937919617,0.13015708327293396,-0.2144034057855606],[0.2978585660457611,-0.30542340874671936,0.29313960671424866,-0.09941613674163818,-0.30031028389930725,-0.1363864541053772,-0.20255929231643677,-0.07352796196937561,0.5425624847412109,0.25764745473861694,0.2714456021785736,0.08023156970739365],[-0.0786031037569046,0.40214282274246216,0.16424696147441864,0.33329999446868896,-0.022956352680921555,0.01506247092038393,0.14116592705249786,0.1686060130596161,0.5867765545845032,0.014383972622454166,0.26291167736053467,0.23036815226078033],[0.3427148461341858,0.5451211929321289,0.04832587018609047,0.15842711925506592,0.09325205534696579,-0.17060518264770508,0.25115182995796204,0.15819166600704193,0.41170617938041687,0.23227138817310333,0.19156412780284882,0.08363845944404602],[0.8502566814422607,0.36199870705604553,0.09883937984704971,0.1472529023885727,0.14162656664848328,-0.1076124832034111,-0.03781072422862053,0.36748331785202026,-0.41071656346321106,0.05408579111099243,-0.017517222091555595,0.061564091593027115],[0.48181167244911194,0.38964545726776123,0.060659199953079224,0.15590114891529083,0.012532607652246952,-0.32088392972946167,0.05552216246724129,-0.03443277254700661,0.6634708046913147,0.2422374039888382,-0.2548601031303406,-0.2164207100868225],[0.07011045515537262,-0.09610801935195923,-0.2709752023220062,-0.07521048933267593,-0.1837320178747177,-0.014468533918261528,-0.2633310556411743,-0.02561967819929123,0.2433309257030487,-0.10611579567193985,0.03466338664293289,-0.20759217441082],[-0.21300798654556274,0.4674971401691437,0.17364512383937836,0.1754118800163269,0.1968674659729004,0.02137344889342785,-0.18868249654769897,0.37698373198509216,0.5866499543190002,-0.011711771599948406,-0.10410412400960922,-0.2003956437110901],[-0.24675121903419495,0.5668720006942749,0.06918591260910034,0.08999045193195343,-0.07732385396957397,0.2224670946598053,0.1802016943693161,0.21766111254692078,0.5919057726860046,0.09259147942066193,-0.04271705448627472,0.06949928402900696],[-0.0379781499505043,0.7539681792259216,0.19138486683368683,0.028622830286622047,-0.3106723427772522,0.2796928286552429,0.0259702131152153,-0.19448472559452057,0.7988131642341614,0.1906203329563141,0.19643756747245789,-0.23876668512821198],[0.3652046024799347,-0.24224795401096344,0.34167465567588806,0.10290687531232834,-0.1485871821641922,-0.01750880293548107,-0.2863617539405823,0.11858315020799637,0.5177168846130371,-0.1298171430826187,-0.13817113637924194,-0.10702401399612427],[0.18979379534721375,0.28381502628326416,0.4323927164077759,0.3507528603076935,0.26117369532585144,0.01352704782038927,0.10946815460920334,-0.10375890880823135,0.4466092586517334,-0.13671602308750153,0.2218068540096283,-0.253093957901001],[-0.5897049903869629,-0.6363607048988342,0.19165202975273132,-0.03856424242258072,-0.1485096514225006,-0.11206229776144028,-0.05020149052143097,0.2522137761116028,0.2642557919025421,-0.03339467942714691,-0.23097677528858185,-0.2416563630104065],[-0.01878523640334606,-0.18810898065567017,-0.2136194258928299,0.02967866323888302,-0.16313838958740234,0.051948122680187225,0.04875795543193817,-0.24524939060211182,-0.09169045090675354,0.22658556699752808,-0.16302895545959473,-0.0643315538764],[-0.20749033987522125,-0.9747004508972168,0.025299357250332832,-0.32429438829421997,0.07608630508184433,-0.23627439141273499,-0.08566921204328537,-0.14915074408054352,0.059866148978471756,0.14727839827537537,0.09264804422855377,0.05303787812590599],[-0.2988990545272827,-0.8586463332176208,0.2958068549633026,-0.28358566761016846,-0.18560725450515747,-0.14141707122325897,-0.08829464018344879,0.04346500337123871,-0.2249811738729477,0.11445929110050201,-0.22402030229568481,-0.08003727346658707],[0.49641597270965576,-0.5831812620162964,-0.049894142895936966,0.06982383131980896,0.13453538715839386,-0.4132937490940094,0.28325343132019043,-0.09211785346269608,0.5630534291267395,-0.22263523936271667,-0.09146229922771454,0.03324327990412712],[-0.032627034932374954,0.14940109848976135,-0.18109625577926636,-0.04947618022561073,0.08338897675275803,0.09202243387699127,0.1487034261226654,-0.09012431651353836,-0.014417478814721107,-0.227565735578537,0.017173830419778824,-0.2207866758108139],[-0.24712516367435455,-0.10150899738073349,0.14936919510364532,0.3251465857028961,0.06477736681699753,0.16409987211227417,0.03433435782790184,0.33975648880004883,0.7559820413589478,-0.154063880443573,0.18766045570373535,0.24708764255046844],[-0.16332948207855225,-0.14914609491825104,0.2039193958044052,-0.28074339032173157,-0.12255989760160446,0.017376789823174477,0.0012974985875189304,-0.07860076427459717,0.021115701645612717,-0.12417086213827133,0.11631473898887634,-0.27064022421836853],[-0.15290775895118713,-0.04791969060897827,0.1380903124809265,-0.1582862138748169,0.018271109089255333,-0.041042037308216095,-0.25529181957244873,0.013511630706489086,-0.3202660381793976,-0.023661980405449867,-0.054782263934612274,0.2169296145439148],[0.20198529958724976,-0.2234610766172409,0.015273910015821457,0.17662711441516876,-0.15823914110660553,-0.11952679604291916,-0.06654320657253265,-0.03713259845972061,-0.23296451568603516,-0.14178559184074402,-0.18145127594470978,0.03354521095752716],[0.13879071176052094,-0.30833855271339417,-0.07078590989112854,0.1371825784444809,-0.09484535455703735,-0.1365640014410019,0.1233220174908638,0.3392416536808014,0.6754562854766846,0.2151954025030136,-0.009764992631971836,0.2974187135696411],[-0.25116637349128723,0.3178344666957855,-0.25288987159729004,0.8251809477806091,-0.2595524489879608,0.49107053875923157,-0.15740233659744263,-0.1315741091966629,0.7828075289726257,0.04789532721042633,-0.08528034389019012,0.010025324299931526],[-0.2104368954896927,0.18809956312179565,-0.15224744379520416,0.15162862837314606,-0.25481319427490234,-0.062089838087558746,-0.12268269807100296,0.12298612296581268,-0.2243552803993225,-0.0946575403213501,-0.143848717212677,0.06737779825925827],[0.2872520983219147,0.04771986976265907,0.11473409831523895,0.05827011168003082,-0.09175946563482285,0.17375154793262482,0.0020459129009395838,0.30643901228904724,0.661752462387085,0.12794755399227142,0.22799749672412872,0.25381577014923096],[-0.14559251070022583,0.054475802928209305,0.12164299935102463,0.1988411545753479,-0.0811939463019371,-0.20258495211601257,-0.006054600700736046,-0.10117364674806595,0.20849868655204773,-0.20804531872272491,-0.180599644780159,0.07765249162912369],[-0.151237353682518,0.2495114803314209,0.032950613647699356,0.15092459321022034,-0.2919607162475586,-0.0010432915296405554,-0.2780790328979492,-0.14990851283073425,-0.25326064229011536,0.04631909728050232,-0.25239768624305725,0.06308969855308533],[0.008581927046179771,-0.1187845766544342,0.1811297982931137,-0.3072686791419983,-0.11958743631839752,0.14403021335601807,-0.13723324239253998,0.31521645188331604,0.6948054432868958,-0.016393018886446953,0.014234193600714207,0.08371096104383469],[-0.609851062297821,0.5852475166320801,0.16933463513851166,0.3138303756713867,0.19894666969776154,-0.1360001116991043,0.2515929639339447,0.20899571478366852,-0.9506004452705383,0.34506064653396606,0.103876031935215,0.032882265746593475],[0.15604816377162933,-0.05554528534412384,-0.12007088959217072,-0.24775433540344238,0.2091948390007019,0.050910405814647675,-0.06617170572280884,-0.053647011518478394,-0.06887510418891907,0.20027653872966766,-0.2770996391773224,0.024089893326163292],[0.020766479894518852,-1.2544559240341187,-0.09479855746030807,-0.024653956294059753,-0.14762786030769348,0.21359288692474365,0.04546468332409859,0.15701080858707428,0.05512601137161255,-0.06086545065045357,0.1190982535481453,0.010481741279363632],[0.18035860359668732,0.4354952871799469,0.10630185157060623,-0.015296711586415768,-0.11946484446525574,-0.2157609909772873,0.261928528547287,-0.008839147165417671,0.627854585647583,-0.03652283549308777,-0.06301537901163101,0.2416255921125412],[-0.1274689882993698,0.1881861537694931,0.5059333443641663,-0.19246146082878113,-0.15116208791732788,-0.09178981930017471,0.2848883867263794,0.013364017941057682,0.46594998240470886,0.09498576819896698,0.2078598141670227,-0.20190230011940002],[0.008077177219092846,-0.9217585921287537,-0.09566744416952133,0.1356264352798462,-0.0800996795296669,-0.04808545112609863,0.1392730176448822,0.11699742823839188,-0.3174338936805725,-0.09114235639572144,-0.15633933246135712,-0.03887658566236496],[-0.15329740941524506,0.020740844309329987,-0.2053096443414688,-0.054014917463064194,-0.01781400479376316,-0.28206929564476013,-0.10182514786720276,0.16185978055000305,-0.05102919787168503,-0.19045020639896393,-0.05084618926048279,-0.004171411041170359],[-0.2735122740268707,0.14437496662139893,0.13878807425498962,-0.23775409162044525,0.049247294664382935,-0.18367619812488556,0.1856573522090912,-0.2995259463787079,-0.13635045289993286,-0.056306056678295135,-0.11906155198812485,0.2127484679222107],[-0.05882701650261879,-0.009214045479893684,0.3825889527797699,0.01694672740995884,-0.27820202708244324,0.18266582489013672,0.01726365089416504,0.02645031549036503,0.6827499270439148,-0.20559635758399963,0.03129526227712631,0.15556076169013977],[-0.24554333090782166,-0.5414194464683533,0.15431421995162964,-0.12245089560747147,0.28650540113449097,0.19142161309719086,0.12567591667175293,0.11058109253644943,0.5063953399658203,0.2608531713485718,-0.19416901469230652,-0.004798109643161297]],"q_net.0.bias":[0.4135476350784302,-0.24937060475349426,0.489082932472229,0.10894971340894699,0.2651180326938629,-0.11868808418512344,-0.009795178659260273,0.49962911009788513,0.5955126881599426,-0.11671634018421173,0.21118202805519104,0.3065403401851654,0.33749130368232727,0.3407381474971771,0.5713314414024353,0.6338732242584229,0.12813276052474976,-0.20174795389175415,0.5208731889724731,0.6191418170928955,-0.2659774422645569,0.6648584604263306,0.050688985735177994,0.36291205883026123,0.41326388716697693,0.4083541929721832,0.44621583819389343,0.4610603451728821,0.17716297507286072,-0.33101192116737366,0.47243767976760864,-0.16685648262500763,0.6360034346580505,0.3057100474834442,0.2513715624809265,0.45843976736068726,0.23374155163764954,-0.055001385509967804,-0.25474295020103455,0.17488914728164673,0.13932166993618011,0.026194896548986435,-0.18933987617492676,0.3141627311706543,-0.2155895233154297,-0.19739742577075958,-0.11061486601829529,0.3846924304962158,0.13106903433799744,-0.1988980919122696,0.1362726390361786,0.4975309669971466,-0.17175939679145813,0.5357040166854858,-0.012078768573701382,-0.16601866483688354,0.04934167116880417,0.5198489427566528,0.3943880796432495,0.28495392203330994,-0.2843935191631317,-0.2527899444103241,0.529032826423645,0.30402299761772156],"q_net.2.weight":[[0.2926959693431854,-1.2442420721054077,0.09452145546674728,-0.019810860976576805,0.07696659862995148,-0.11821947991847992,-0.04632559418678284,0.06991282105445862,0.3525838553905487,0.03141483664512634,0.22062645852565765,0.23649412393569946,0.16962087154388428,0.21933063864707947,0.3450166881084442,0.16610580682754517,0.25383564829826355,0.05516791343688965,0.30839473009109497,0.3747297525405884,-0.10553613305091858,0.2370181381702423,0.23004914820194244,0.26567399501800537,0.24857854843139648,0.13519328832626343,0.2717040479183197,0.2693607211112976,-0.0025173849426209927,-1.3067936897277832,0.072280652821064,0.04587221145629883,0.3725348711013794,0.18129195272922516,0.34887465834617615,0.25765591859817505,0.18596811592578888,-0.045988500118255615,0.02927100658416748,0.3142293691635132,0.22398768365383148,-0.6018616557121277,-0.010126556269824505,0.30650225281715393,0.05383095145225525,0.11202405393123627,0.026946330443024635,0.2526698410511017,0.8557096123695374,0.05644082650542259,0.08449512720108032,0.3068494498729706,0.0672319233417511,0.2677614986896515,-0.6436169743537903,-0.011049285531044006,0.3069891929626465,0.31579673290252686,0.2659372091293335,0.04538321867585182,0.03158929944038391,0.11367736756801605,0.1966150552034378,0.2646426558494568],[0.1409197598695755,-1.0771679878234863,0.12813439965248108,-0.0130011523142457,-0.07171346992254257,-0.07299262285232544,0.07746084034442902,0.19114883244037628,0.2721855938434601,0.004955843091011047,0.25376376509666443,0.12939180433750153,0.3521306812763214,0.2514485716819763,0.28615787625312805,0.26229730248451233,0.08593206852674484,0.03918454051017761,0.2950476408004761,0.17211981117725372,0.055221691727638245,0.21799534559249878,0.043061550706624985,0.1017104983329773,-0.018390996381640434,0.24399922788143158,0.16279293596744537,0.23350496590137482,-0.018525168299674988,-1.3896948099136353,0.009745004586875439,-0.01946111023426056,0.3261595666408539,0.32891151309013367,0.26063674688339233,0.06582748144865036,0.142999529838562,-0.05831616744399071,-0.041306689381599426,0.32429376244544983,0.22644664347171783,-0.9245836734771729,-0.07582208514213562,0.24651922285556793,-0.04364593327045441,-0.038957782089710236,-0.08026127517223358,0.20764365792274475,0.37092325091362,0.05324382707476616,0.14152760803699493,0.5056060552597046,-0.046062737703323364,0.15619342029094696,0.16561441123485565,0.07014584541320801,0.03110591135919094,0.15451966226100922,0.21165962517261505,-0.04585462063550949,0.031445249915122986,0.036259256303310394,0.20593281090259552,0.2393404245376587],[-0.05070492997765541,-0.43218347430229187,-0.07499624788761139,0.20760570466518402,0.011332713067531586,-0.12059621512889862,-0.09648634493350983,-0.19127261638641357,-0.20507703721523285,-0.06282918155193329,-0.1576358526945114,-0.004811675753444433,-0.272735059261322,0.485999196767807,0.2672964930534363,-0.006204022094607353,0.3619179129600525,0.08569872379302979,-0.2609621584415436,0.22962383925914764,0.00816790759563446,0.15616579353809357,-0.3486112654209137,-0.2952823042869568,0.06204485893249512,0.0825149267911911,0.013674587942659855,-0.039755113422870636,-0.046488359570503235,-0.036209411919116974,-0.08904605358839035,0.12072132527828217,0.07742506265640259,-0.11647190153598785,-0.30811718106269836,0.2745068669319153,-0.08752481639385223,0.3411450684070587,0.030989989638328552,0.3846975862979889,0.3184947669506073,0.2319096028804779,-0.044195473194122314,0.10889403522014618,0.043189167976379395,-0.08547843992710114,-0.035918742418289185,0.1220143735408783,-0.23207370936870575,-0.024064794182777405,-0.05390876159071922,0.09351679682731628,0.0808766633272171,0.23252587020397186,0.025134285911917686,-0.0967937558889389,0.3979962170124054,-0.00677134795114398,0.10159047693014145,0.2749110758304596,0.08305741846561432,-0.1017339900135994,0.02801360934972763,0.2581816017627716],[0.012118399143218994,-0.10412128269672394,0.06943368911743164,-0.01291896402835846,0.029530882835388184,-0.005033671855926514,0.02141590416431427,-0.05389106273651123,0.0635538250207901,-0.09606815874576569,0.005322754383087158,0.033585965633392334,0.11025778949260712,-0.022696390748023987,0.020255103707313538,-0.04116450250148773,0.057265982031822205,-0.04238368570804596,-0.053213343024253845,0.03393416106700897,0.09237641096115112,-0.09919548034667969,-0.015333399176597595,0.07430647313594818,-0.017049968242645264,-0.11650140583515167,0.08549357950687408,-0.036032870411872864,0.020439714193344116,-0.12385311722755432,-0.04046587646007538,-0.11438973248004913,-0.08663089573383331,0.09391660988330841,-0.12446549534797668,-0.04804085195064545,-0.04749463498592377,-0.03136944770812988,0.09706220030784607,-0.08380687236785889,-0.01739390194416046,-0.09073752164840698,-0.05111607909202576,0.05377601087093353,0.09042094647884369,0.09316052496433258,-0.11703552305698395,-0.0611700564622879,0.026867792010307312,-0.10352273285388947,-0.09217764437198639,0.0352972149848938,0.11423109471797943,0.05237951874732971,0.0012701451778411865,-0.07548408210277557,-0.05494369566440582,-0.1028653085231781,-0.09059111773967743,0.0784328281879425,-0.042402833700180054,0.061311766505241394,0.05979347229003906,-0.07113516330718994],[0.3377482295036316,-0.7805570960044861,0.16116319596767426,0.20888088643550873,0.15359695255756378,-0.08683095872402191,-0.014936476945877075,0.2992294430732727,0.21866321563720703,0.09821116924285889,0.15181733667850494,0.3572845458984375,0.3103230595588684,0.1732223778963089,0.48820823431015015,0.25202080607414246,0.3309425413608551,-0.02401919662952423,0.3513129651546478,0.3522058427333832,0.04414808750152588,0.42184001207351685,0.148734450340271,0.21833911538124084,0.439739465713501,0.17937920987606049,0.3870721161365509,0.30213990807533264,0.09754724055528641,-0.7555601596832275,0.31239548325538635,-0.08451534807682037,0.3777620792388916,0.3368273973464966,0.24616305530071259,0.4804077446460724,0.31062182784080505,0.0310595091432333,-0.09026531875133514,0.2522556781768799,0.142729252576828,0.1318548321723938,-0.011181673035025597,0.3592652976512909,-0.050374314188957214,0.06017657369375229,-0.07870925962924957,0.2019168883562088,0.8335590362548828,-0.01677342690527439,0.28302326798439026,0.4523693025112152,-0.10058053582906723,0.46019914746284485,-0.7282047867774963,-0.0033078640699386597,0.30050674080848694,0.27982622385025024,0.3786345422267914,0.20421548187732697,-0.10782855749130249,-0.08026634156703949,0.40850117802619934,0.23573586344718933],[0.2316758781671524,-0.7854868173599243,0.20154748857021332,0.10373720526695251,0.2905254364013672,-0.02099078893661499,-0.059379756450653076,0.24374498426914215,0.3912779688835144,0.04664790630340576,0.16538293659687042,0.2828890383243561,0.3640972673892975,0.2799648344516754,0.4556826651096344,0.2847808599472046,0.21452324092388153,0.1129782646894455,0.41702213883399963,0.23491425812244415,-0.0034729093313217163,0.2311730682849884,0.3267131447792053,0.26466792821884155,0.20130372047424316,0.23081424832344055,0.3278525471687317,0.09533853083848953,0.2044520080089569,-0.7159968614578247,0.4045126140117645,0.00756189227104187,0.3717421293258667,0.15160083770751953,0.12106341868638992,0.31369277834892273,0.23599280416965485,0.1319344937801361,-0.04400227963924408,0.3353849947452545,0.2837868630886078,-0.22448593378067017,0.032015055418014526,0.2612385153770447,0.006061479449272156,0.009403989650309086,-0.09944525361061096,0.32329070568084717,0.6326116323471069,-0.0024403438437730074,0.2295178920030594,0.2608513832092285,-0.08841297775506973,0.2587520182132721,-0.7920610904693604,-0.07271316647529602,0.06329864263534546,0.33037829399108887,0.24979667365550995,0.13908831775188446,-0.10026849806308746,-0.11220499128103256,0.43565940856933594,0.3419627547264099],[-0.11063174903392792,-0.09989787638187408,0.07963445782661438,0.12425118684768677,-0.00713995099067688,0.017718985676765442,0.05863618850708008,-0.06224609911441803,-0.04967166483402252,-0.01497708261013031,-0.10672971606254578,-0.0020607411861419678,-0.056289076805114746,-0.007850587368011475,-0.10734415054321289,0.045926257967948914,-0.10208864510059357,-0.0008978545665740967,0.12056821584701538,0.02272684872150421,-0.09334661066532135,0.05001884698867798,-0.08760777115821838,0.031423166394233704,-0.038694828748703,-0.06565354764461517,-0.11464139819145203,-0.019538626074790955,-0.04394136369228363,0.10227371752262115,-0.09587638080120087,-0.09113204479217529,-0.1113242655992508,0.06673899292945862,0.051759570837020874,-0.08841629326343536,-0.0667521059513092,-0.12197262048721313,-0.10505403578281403,-0.10538525879383087,-0.10325412452220917,-0.0669553279876709,-0.0913514494895935,-0.0895569771528244,0.06939461827278137,0.019323021173477173,-0.03794541954994202,-0.11083705723285675,-0.07178325951099396,-0.008207544684410095,-0.08109518885612488,-0.08662045001983643,0.0682288408279419,-0.11911159753799438,0.0058890581130981445,0.0749911218881607,0.0014223754405975342,-0.11994382739067078,-0.042099758982658386,0.10449066758155823,-0.004628971219062805,-0.02273784577846527,-0.03322574496269226,-0.08003804087638855],[0.04081110656261444,-0.02525933086872101,0.08897995948791504,-0.10772021114826202,0.059947073459625244,0.11201544106006622,-0.0017124414443969727,0.04744236171245575,-0.10605600476264954,0.115897536277771,-0.01719123125076294,-0.10180297493934631,-0.035198137164115906,-0.05112205445766449,0.02255547046661377,-0.10238800942897797,-0.12319272756576538,0.0993112176656723,0.03035615384578705,-0.07996892929077148,-0.09354910254478455,-0.07255670428276062,0.012585356831550598,-0.09266600012779236,0.1205681562423706,-0.11165526509284973,-0.07111568748950958,0.08204537630081177,0.042069002985954285,-0.10346326231956482,0.05107338726520538,0.008221834897994995,-0.0410287082195282,0.1110801249742508,0.06759680807590485,-0.07510095834732056,-0.11045777797698975,-0.11686883866786957,-2.0712614059448242e-06,0.03169281780719757,0.009101033210754395,-0.08793553709983826,0.06804317235946655,0.016602039337158203,-0.11268734931945801,-0.11374613642692566,0.032110393047332764,-0.06132756173610687,0.00858411192893982,-0.013150453567504883,0.11744417250156403,-0.026392832398414612,-0.04260328412055969,-0.037849098443984985,0.031616345047950745,-0.11712539196014404,-0.07290801405906677,-0.019261434674263,-0.08093111217021942,0.11579172313213348,-0.07497386634349823,-0.08725930750370026,0.10557298362255096,-0.06892162561416626],[0.1730213165283203,-0.8647676706314087,0.19971509277820587,0.06116562336683273,0.03944450616836548,-0.09993363916873932,0.1178525984287262,0.19464130699634552,0.1906195878982544,0.06617043912410736,0.10492287576198578,0.3152240216732025,0.21471741795539856,0.147268608212471,0.4929487407207489,0.26650404930114746,0.2409641444683075,0.06202399730682373,0.10778986662626266,0.2939472794532776,-0.01567983627319336,0.4330032467842102,0.03775959461927414,0.23801034688949585,0.27900564670562744,0.3237425982952118,0.3874813914299011,0.2598661780357361,0.1030537486076355,-0.5471201539039612,0.3126284182071686,0.007092922925949097,0.13459156453609467,0.128566712141037,0.12330828607082367,0.3748806118965149,0.05250253155827522,-0.05594955384731293,-0.08888113498687744,0.24834716320037842,0.1843327283859253,-0.01391063816845417,-0.02708173543214798,0.30191582441329956,-0.056194767355918884,-0.09130863100290298,-0.06380718946456909,0.2578454911708832,0.9569823741912842,0.0003338062088005245,0.18347841501235962,0.42551189661026,-0.002690900582820177,0.39920568466186523,-1.0449737310409546,-0.0031352639198303223,0.49396973848342896,0.2546165883541107,0.16849331557750702,0.15169644355773926,-0.0072978585958480835,-0.11804846674203873,0.3014149069786072,0.26940593123435974],[0.07095037400722504,0.014419198036193848,0.0390755720436573,0.00607711635529995,0.048911891877651215,0.09871731698513031,0.11009764671325684,-0.030422288924455643,-0.15953925251960754,0.032048970460891724,-0.11220373958349228,0.07229787856340408,0.018817748874425888,0.05017593130469322,0.1364375203847885,-0.01521214284002781,-0.021505974233150482,0.04662691056728363,-0.1576148420572281,0.10228034853935242,0.10014680027961731,0.025478417053818703,-0.07548186182975769,-0.07994113117456436,0.07388459891080856,-0.03949204087257385,0.01144631952047348,-0.08057595044374466,-0.13402685523033142,0.10548870265483856,-0.12093007564544678,0.11203701794147491,-0.14725367724895477,-0.03624652326107025,-0.10040857642889023,0.03364215046167374,-0.09650911390781403,0.04669211804866791,-0.026854440569877625,0.06570684909820557,0.043564390391111374,-0.07504978775978088,0.11003628373146057,-0.08281742036342621,0.01224943995475769,0.10567327588796616,-0.04973575472831726,-0.11995049566030502,0.08061568439006805,-0.09996877610683441,-0.0695638507604599,-0.00012180209159851074,0.11136813461780548,0.025918327271938324,-0.0017531984485685825,0.08643500506877899,0.02528383396565914,-0.14308904111385345,0.035712603479623795,-0.0480448380112648,0.0016412436962127686,-0.060310643166303635,-0.04973391070961952,-0.0005237956647761166],[0.008505507372319698,-0.3253494203090668,0.02606726810336113,0.18943272531032562,-0.022951191291213036,0.043315187096595764,0.12173859775066376,-0.021417245268821716,-0.13549596071243286,-0.08342932164669037,-0.12261772900819778,-0.07290379703044891,-0.19272339344024658,0.5345410108566284,0.023697247728705406,0.021718788892030716,0.3273909389972687,-0.08795440196990967,-0.19548159837722778,0.03850524127483368,0.11825986206531525,0.07048512250185013,-0.1783827841281891,-0.18437574803829193,0.03504225239157677,-0.07683786749839783,0.21476688981056213,0.058102305978536606,-0.20198418200016022,-0.5372944474220276,-0.06261353939771652,-0.010415151715278625,0.10146281123161316,-0.21859851479530334,-0.2123124897480011,0.15272487699985504,0.004506770987063646,0.2754356861114502,-0.052936851978302,0.42775028944015503,0.4257589280605316,-0.1082848310470581,-0.009039019234478474,0.1332162767648697,-0.01228797435760498,-0.07300188392400742,-0.004296347498893738,-0.03824426606297493,-0.3537796437740326,-0.12229874730110168,-0.06740163266658783,0.3377916216850281,0.08860112726688385,0.15848124027252197,0.32437703013420105,0.029835864901542664,0.036278270184993744,-0.09207624942064285,0.016987161710858345,0.3118569254875183,-0.05460038781166077,0.031447917222976685,0.08065376430749893,0.2299632728099823],[0.2744888663291931,-1.0456832647323608,0.3343258798122406,0.24504701793193817,0.14004598557949066,-0.034257978200912476,0.0239240825176239,0.204901784658432,0.30773821473121643,-0.07633356750011444,0.28265294432640076,0.32850944995880127,0.19338946044445038,0.2887336313724518,0.5361534357070923,0.2501350939273834,0.4007873833179474,-0.0905005931854248,0.24047349393367767,0.38106605410575867,-0.011450499296188354,0.20839659869670868,0.24982555210590363,0.33249080181121826,0.3053628206253052,0.34076598286628723,0.08348152786493301,0.32750701904296875,0.20620878040790558,-1.2500416040420532,0.3064013123512268,0.0022965818643569946,0.3796921670436859,0.3886161148548126,0.2521723806858063,0.057070523500442505,0.16932609677314758,-0.08101960271596909,0.07267946004867554,0.3564342260360718,0.24337930977344513,-0.5538968443870544,0.07645639032125473,0.35976001620292664,-0.06247328221797943,-0.048233456909656525,0.0922313779592514,0.08044470846652985,0.8277894854545593,0.11657210439443588,0.14658059179782867,0.15645959973335266,-0.050118423998355865,0.12510713934898376,-0.6638323068618774,-0.02669556438922882,0.032733090221881866,0.3317083716392517,0.2914896309375763,0.14563080668449402,-0.012411922216415405,-0.05644316226243973,0.26383864879608154,0.4153665006160736],[0.01842348650097847,-0.3082890510559082,0.029673611745238304,0.26134786009788513,0.04740942269563675,-0.047148630023002625,0.032292380928993225,-0.1557057946920395,-0.2918904423713684,0.12238858640193939,-0.24803413450717926,-0.026846202090382576,-0.12825624644756317,0.41048958897590637,0.2873811423778534,-0.2436583787202835,0.3779110312461853,-0.06187520921230316,-0.15057620406150818,0.12819401919841766,0.09215055406093597,0.06492399424314499,-0.41512593626976013,-0.24457573890686035,-0.07901902496814728,-0.03022938221693039,0.18236832320690155,0.06657545268535614,-0.13873650133609772,0.07594504952430725,-0.15238137543201447,0.08628368377685547,0.04526156559586525,-0.20611009001731873,-0.21102355420589447,0.11444617062807083,-0.07062578946352005,0.29488423466682434,-0.008868888020515442,0.44928115606307983,0.3998459279537201,0.4122614562511444,0.07477854192256927,0.1837606579065323,0.10624369978904724,-0.018360106274485588,0.08244682848453522,0.1925668865442276,-0.05314493179321289,-0.07169786095619202,-0.04480157420039177,0.23162423074245453,-0.0365915447473526,-0.024758649989962578,0.0208029355853796,-0.08589635789394379,0.663320779800415,0.04510456323623657,0.1658381074666977,0.5483032464981079,0.12349027395248413,-0.03196590766310692,0.20151768624782562,0.19161996245384216],[0.1589721441268921,-0.7038910984992981,0.2534511089324951,0.11091379821300507,0.10319369286298752,-0.0207432359457016,-0.051123276352882385,0.07745905965566635,0.12538930773735046,-0.06455016136169434,0.2169649451971054,0.16128814220428467,0.3369610011577606,0.08475015312433243,0.3766584098339081,0.2230542153120041,0.0129805076867342,-0.09955966472625732,0.24714496731758118,0.299925833940506,0.08503212034702301,0.30792585015296936,-0.03716844320297241,0.4286974370479584,0.35226890444755554,0.10611268132925034,0.46204471588134766,0.13810893893241882,-0.06194815784692764,-0.5063656568527222,0.3301064372062683,-0.04226809740066528,0.12051981687545776,0.12943357229232788,0.30669477581977844,0.38997554779052734,0.1921028345823288,-0.04075241833925247,-0.008630797266960144,0.26175808906555176,0.15964609384536743,0.5588027238845825,-0.08120723068714142,0.2805003225803375,0.10464116930961609,-0.07724954187870026,0.1142551451921463,0.20036861300468445,1.170390009880066,-0.047130901366472244,0.24434129893779755,0.4069060981273651,-0.04716600477695465,0.40960031747817993,-1.1107920408248901,0.096554234623909,0.44667109847068787,0.3340551257133484,0.22321169078350067,0.2552345097064972,-0.09632079303264618,0.058238666504621506,0.3551595211029053,0.10812296718358994],[0.3111313581466675,-0.5548855066299438,0.04191796854138374,0.1965346336364746,0.198427215218544,0.04380907118320465,-0.030010759830474854,0.1924208402633667,0.004966390784829855,0.08731240034103394,0.20467445254325867,0.3161950707435608,0.2847890257835388,0.12334592640399933,0.49885523319244385,0.32919570803642273,0.32530122995376587,0.04288432002067566,0.08853976428508759,0.3780975043773651,-0.06284838914871216,0.36496809124946594,0.1835685819387436,0.10546237975358963,0.2981666922569275,0.2064121514558792,0.4077471196651459,0.16783612966537476,0.013435282744467258,-0.4791012406349182,0.2605418860912323,-0.10183793306350708,0.3008250594139099,-0.014431548304855824,0.3068208694458008,0.5856431722640991,0.18718527257442474,0.2926194965839386,-0.07919123768806458,0.24559572339057922,0.1108255460858345,0.3570873439311981,0.05096977949142456,0.2724556624889374,-0.017394110560417175,0.1227087751030922,0.009012731723487377,0.20968417823314667,0.9053276777267456,0.05095493048429489,0.0832657739520073,0.32047006487846375,-0.026429299265146255,0.3871239721775055,-0.920627772808075,-0.025180593132972717,0.2232804149389267,0.19429370760917664,0.1672331541776657,0.22919677197933197,-0.10722175240516663,0.026988854631781578,0.3717227578163147,0.28552794456481934],[-0.12423813343048096,0.05745415389537811,-0.07300189137458801,0.009985650889575481,0.005357528571039438,0.08917531371116638,-0.10527610778808594,-0.021451666951179504,-0.030140012502670288,-0.08469028770923615,-0.033563558012247086,-0.008793536573648453,-0.07914507389068604,-0.0014695256249979138,-0.025821149349212646,0.10776901245117188,0.032767653465270996,-0.07195229828357697,0.01677069067955017,0.10196872800588608,0.09066227078437805,0.052269335836172104,0.08896920084953308,-0.1161527931690216,-0.07402808964252472,-0.098201684653759,0.09671666473150253,0.0170702263712883,-0.09847088903188705,0.015481024980545044,0.09352326393127441,-0.07633623480796814,-0.0907096415758133,-0.1036071926355362,-0.09545434266328812,-0.005693547427654266,-0.11282549053430557,-0.1217963695526123,0.036909252405166626,0.10541614890098572,-0.029828369617462158,-0.03441309928894043,0.10766105353832245,-0.13444867730140686,0.03903679549694061,0.03898090124130249,-0.03192085027694702,0.025209352374076843,-0.09396179020404816,-0.113025963306427,-0.10178898274898529,0.009769171476364136,0.014083728194236755,-0.0959225744009018,0.12037557363510132,0.11307945847511292,-0.04136449471116066,-0.03307216241955757,0.05581565573811531,-0.07103826105594635,0.003794267773628235,0.0286138653755188,-0.10080404579639435,0.02380506880581379],[0.28680330514907837,-1.0029935836791992,0.31904545426368713,0.2379494160413742,0.2012641280889511,-0.08307307958602905,0.10069237649440765,0.14180520176887512,0.3898911774158478,-0.025648847222328186,0.18185484409332275,0.2817014455795288,0.34109872579574585,0.1553049385547638,0.48720747232437134,0.40891197323799133,0.2721814513206482,-0.03850986063480377,0.40682870149612427,0.27616408467292786,0.046616896986961365,0.3135197162628174,0.13518284261226654,0.18304908275604248,0.20743504166603088,0.33976227045059204,0.22125358879566193,0.16243523359298706,0.2885487973690033,-1.0714421272277832,0.3777161240577698,0.047119855880737305,0.2861177921295166,0.4018802344799042,0.3714999556541443,0.156826451420784,0.27374163269996643,0.06958241015672684,0.05075348913669586,0.3987945020198822,0.3613660931587219,-0.6166571378707886,0.09538913518190384,0.2597578763961792,-0.031048431992530823,0.05703404173254967,0.06483709067106247,0.14355556666851044,0.5657418370246887,-0.04887480288743973,0.17369115352630615,0.2594423294067383,0.010273942723870277,0.3150269389152527,-0.6005242466926575,-0.11823904514312744,-0.056433890014886856,0.3754681646823883,0.3251257538795471,0.1427636593580246,0.10678485035896301,0.017417021095752716,0.2743717432022095,0.2927142381668091],[0.04617366939783096,-0.09289216995239258,0.022442510351538658,0.07054534554481506,-0.06751801818609238,0.0746215283870697,-0.11391845345497131,0.060134172439575195,-0.07662206888198853,-0.09793196618556976,0.07714612036943436,-0.028365112841129303,-0.11803299188613892,-0.008345428854227066,0.061004385352134705,0.009682070463895798,-0.05281840264797211,0.033273473381996155,-0.08736105263233185,-0.029897017404437065,0.06584329903125763,-0.008596024475991726,0.06390511989593506,-0.013877968303859234,-0.135696142911911,-0.12789137661457062,-0.1380448043346405,0.0032899100333452225,-0.14276321232318878,-0.03588774800300598,0.024772347882390022,0.11489325761795044,-0.09308645129203796,0.05220380797982216,-0.08482329547405243,-0.01874884031713009,-0.12698747217655182,-0.02337401919066906,-0.050495654344558716,-0.0515647828578949,-0.11287882924079895,-0.0827949047088623,-0.07379917800426483,-0.11259526014328003,-0.09626999497413635,0.04893076419830322,0.03178906440734863,0.018074480816721916,0.037000324577093124,-0.06451022624969482,-0.013626592233777046,0.014475175179541111,0.034380435943603516,-0.11776953190565109,0.058457255363464355,0.07525153458118439,-0.06926551461219788,-0.11142842471599579,0.09144559502601624,0.08229231089353561,0.028623968362808228,-0.0355391800403595,0.02155337668955326,-0.04083789885044098],[-0.03756709396839142,-0.052523985505104065,-0.04168665409088135,0.03373776376247406,0.027858659625053406,0.055860504508018494,-0.056049346923828125,-0.07386043667793274,-0.11624480783939362,0.10949194431304932,-0.011200979351997375,0.036848098039627075,0.12067118287086487,-0.06220351159572601,0.075301393866539,0.03951816260814667,-0.08924634754657745,-0.04622744023799896,-0.06616979837417603,-0.05042587220668793,-0.061192214488983154,-0.08433227241039276,0.062107786536216736,0.0585140734910965,0.033881306648254395,0.08170424401760101,-0.08791296184062958,-0.09288519620895386,-0.07364864647388458,0.09952463209629059,-0.04542820155620575,0.07621705532073975,0.11937464773654938,-0.03729841113090515,-0.03883630037307739,-0.0029302239418029785,0.12222319841384888,-0.0322091281414032,0.10470332205295563,-0.047902390360832214,0.024768322706222534,-0.031115993857383728,-0.05468319356441498,0.01759381592273712,-0.08319997787475586,-0.012863487005233765,-0.06794853508472443,-0.05104881525039673,-0.08359773457050323,0.03158281743526459,-0.06341484189033508,0.09795022010803223,0.04875631630420685,0.1176249086856842,0.0432315468788147,-0.001344442367553711,-0.10971878468990326,-0.05571641027927399,-0.11792358756065369,-0.1224295049905777,0.056764259934425354,-0.004426613450050354,-0.03184320032596588,-0.05715218186378479],[0.05272183194756508,0.11370310187339783,0.10357320308685303,0.03936352580785751,0.06916001439094543,-0.03323328495025635,0.04841335117816925,-0.11380092054605484,0.03270798549056053,-0.10380241274833679,-0.0408695712685585,-0.02119837887585163,0.013871178962290287,0.03095114603638649,0.11760452389717102,0.008978668600320816,0.09605055302381516,-0.05631600320339203,-0.014142428524792194,0.09933459758758545,0.028654173016548157,-0.10921037197113037,-0.10974346846342087,-0.03192358836531639,0.10862056910991669,0.08568169176578522,-0.04922839254140854,-0.11820760369300842,-0.11849191039800644,0.07613790035247803,-0.1373816579580307,-0.03141394257545471,-0.035575538873672485,-0.08981143683195114,0.00045796018093824387,0.0469265915453434,-0.09513480216264725,-0.054287418723106384,-0.017749428749084473,-0.1399441510438919,0.09799478948116302,0.00773084769025445,-0.04674403369426727,-0.11790710687637329,-0.0485110878944397,0.05858482047915459,0.11230717599391937,-0.10596038401126862,-0.11681072413921356,0.016684457659721375,0.014348104596138,0.11886708438396454,0.06953829526901245,0.061810895800590515,0.08355015516281128,-0.07206539809703827,0.09810148924589157,0.028567984700202942,-0.10117466002702713,0.07647337764501572,0.08183413743972778,0.0780813992023468,0.0765240490436554,-0.10553451627492905],[0.0539022795855999,0.0586567223072052,-0.09783298522233963,0.09985706210136414,0.049529414623975754,0.025728553533554077,-0.054912105202674866,-0.12178611010313034,-0.06709762662649155,-0.07394719123840332,0.01855453848838806,-0.10144014656543732,-0.07776157557964325,0.1084001287817955,0.11024899035692215,-0.05253548175096512,0.11298777908086777,0.001525595784187317,-0.08731143176555634,-0.10519719123840332,0.0806393176317215,0.10227487236261368,-0.14719881117343903,0.046549130231142044,0.10827124118804932,-0.05515403300523758,0.058889131993055344,-0.11682482063770294,-0.11285962164402008,-0.04566161334514618,0.00048339797649532557,-0.043480679392814636,-0.06399767100811005,-0.11694275587797165,0.055405519902706146,-0.02374323084950447,0.004622892010957003,-0.08589266985654831,0.05021941661834717,0.11135905236005783,-0.028111955150961876,-0.03544687107205391,0.045646533370018005,-0.01588846929371357,0.11672906577587128,0.06979167461395264,-0.09873168170452118,0.11817795038223267,-0.023250050842761993,0.11184008419513702,-0.027842795476317406,0.008767783641815186,-0.08076280355453491,-0.06811969727277756,0.10145077109336853,-0.0644201934337616,0.0552462637424469,-0.07565226405858994,-0.04577295482158661,0.047829482704401016,-0.034995436668395996,-0.004166051745414734,-0.10177682340145111,0.03130088374018669],[-0.04228457435965538,0.12226544320583344,-0.08371449261903763,0.07139928638935089,-0.06735039502382278,0.030361056327819824,0.09212474524974823,-0.12339305877685547,-0.08501972258090973,0.12129291892051697,0.025462832301855087,-0.066669762134552,-0.03153778612613678,0.057561833411455154,-0.022905617952346802,0.11180318892002106,0.057187631726264954,0.06563146412372589,-0.09049303829669952,-0.04317962005734444,-0.10121895372867584,-0.1398657113313675,0.11680412292480469,0.014544358476996422,-0.030636314302682877,-0.09916402399539948,0.0831567645072937,-0.12399625033140182,0.04335520416498184,0.009196862578392029,-0.11512716114521027,0.05668507516384125,0.02654428221285343,0.06042879819869995,0.011279836297035217,0.06812254339456558,0.0789971649646759,-0.005225944798439741,0.07916133105754852,0.0928867906332016,0.014832520857453346,-0.10815559327602386,-0.04341748356819153,0.09766032546758652,0.008639723062515259,-0.12381267547607422,-0.04063968360424042,0.03889705240726471,-0.07931289076805115,0.09665115177631378,-0.10713299363851547,0.04438081383705139,0.023833632469177246,0.10816971957683563,-0.004249095916748047,-0.09836642444133759,0.09716976433992386,0.018683064728975296,0.0712631493806839,-0.08360211551189423,-0.1138269305229187,0.05934661626815796,-0.10407239198684692,-0.001621742150746286],[0.08621756732463837,-0.009602099657058716,-0.1238396167755127,-0.1295856088399887,0.055093344300985336,0.12446652352809906,0.08611465990543365,0.10649415850639343,-0.06546895951032639,-0.10577544569969177,-0.0829058513045311,-0.07489598542451859,0.08473225682973862,-0.05205177143216133,-0.11705002188682556,-0.10327927768230438,0.03591696918010712,-0.05957929790019989,-0.024350730702280998,0.048640429973602295,-0.0798351913690567,-0.04027996212244034,0.022992879152297974,-0.13593953847885132,0.05009878799319267,0.029747920110821724,-0.030868545174598694,-0.036381009966135025,-0.04278844967484474,0.11545735597610474,0.09491579979658127,-0.036505475640296936,-0.13298335671424866,-0.03239643573760986,-0.012966440990567207,0.08211624622344971,0.10440397262573242,-0.09787511825561523,0.10724472999572754,-0.11349126696586609,-0.059940844774246216,-0.07405416667461395,-0.05776415765285492,-0.006393773946911097,0.0449795126914978,0.07585865259170532,0.08062270283699036,-0.10233667492866516,-0.0880742073059082,0.009673401713371277,-0.04535519331693649,0.023833677172660828,-0.10206884145736694,0.0372706763446331,0.07828317582607269,-0.04310308396816254,0.07172607630491257,0.05252654850482941,-0.042830053716897964,-0.06832291185855865,-0.0942666083574295,0.091384157538414,-0.1239691898226738,0.05359009653329849],[0.03307052329182625,0.11263475567102432,0.04167523607611656,-0.1399342268705368,0.05065000429749489,-0.06748270988464355,-0.03036092221736908,-0.07382875680923462,0.08540192246437073,-0.09365086257457733,0.06833845376968384,0.08657526969909668,0.0483693853020668,-0.11655379086732864,0.01204895880073309,-0.12690263986587524,-0.11740931123495102,0.04247559607028961,-0.0003440760192461312,0.0935731753706932,-0.032617613673210144,0.023752087727189064,-0.02671385370194912,-0.10687512904405594,0.08442245423793793,0.014805623330175877,-0.09147392958402634,-0.12472240626811981,-0.023578062653541565,0.09564229100942612,-0.10762666910886765,0.04194025695323944,0.11045950651168823,0.07932495325803757,-0.12321683764457703,0.07818710058927536,-0.09629209339618683,0.07804364711046219,0.06208507716655731,0.0614999420940876,-0.05631646513938904,0.14423684775829315,-0.014156192541122437,0.09294570237398148,-0.014215722680091858,0.09107686579227448,0.02192053198814392,-0.0715004950761795,0.02539908140897751,0.09144578874111176,0.053534042090177536,0.09662958234548569,0.02899305522441864,-0.13392236828804016,0.06601053476333618,0.08935569226741791,-0.055724021047353745,-0.07578516006469727,-0.13347609341144562,0.09802734851837158,-0.10242713987827301,0.003496900200843811,-0.05022619664669037,-0.01793096773326397],[0.1183919906616211,-0.6710925698280334,0.16969087719917297,0.12789680063724518,0.11653301119804382,-0.08909666538238525,-0.108592689037323,0.27105897665023804,0.15652035176753998,-0.10954339802265167,0.15273167192935944,0.30650055408477783,0.2773965001106262,0.37435182929039,0.6532285213470459,0.21693658828735352,0.21172571182250977,-0.07997551560401917,0.34675905108451843,0.32473671436309814,0.1026209145784378,0.4003998935222626,0.06154727563261986,0.11849039047956467,0.14484769105911255,0.36470168828964233,0.3045302927494049,0.2761467397212982,0.027567937970161438,-0.772704005241394,0.3934311866760254,-0.07712528109550476,0.25255778431892395,0.3101619780063629,0.18475930392742157,0.268819123506546,0.14181481301784515,0.03245570510625839,-0.11431340873241425,0.29994651675224304,0.21416591107845306,-0.06425591558218002,0.06949027627706528,0.27833881974220276,-0.016274437308311462,0.06855437904596329,0.12857012450695038,0.16878639161586761,0.6373732089996338,-0.06998410075902939,0.24656403064727783,0.4446122944355011,-0.11190735548734665,0.21471112966537476,-0.7422158122062683,0.10445454716682434,0.07434035837650299,0.3448680639266968,0.16366352140903473,0.27192699909210205,-0.04024188220500946,0.10513242334127426,0.39099568128585815,0.26726382970809937],[0.3104158043861389,-0.3301832675933838,0.23357324302196503,0.2187219262123108,0.22383064031600952,0.10582751035690308,-0.025309816002845764,0.34143322706222534,0.20043033361434937,0.023152172565460205,0.18326202034950256,0.3841053545475006,0.3059561550617218,0.2772921621799469,0.7117640376091003,0.46661463379859924,0.3824722170829773,-0.0539073646068573,0.19322536885738373,0.1390094757080078,-0.06276226043701172,0.3678153455257416,0.2564071714878082,0.519228994846344,0.29529649019241333,0.24714216589927673,0.33527302742004395,0.17581157386302948,0.13639479875564575,-0.07427635043859482,0.4041624963283539,0.04861027002334595,0.34010034799575806,0.19193461537361145,0.3193201422691345,0.43676501512527466,0.15976518392562866,-0.01329825259745121,0.0057366639375686646,0.12946435809135437,0.3347650170326233,0.18564513325691223,0.020433733239769936,0.08177469670772552,0.051450058817863464,0.03456335514783859,0.04351881146430969,0.1703972965478897,0.8471460938453674,-0.09479206800460815,0.31822606921195984,0.08983442932367325,0.06279341131448746,0.39422550797462463,-1.2752429246902466,0.05845114588737488,-0.1157742515206337,0.38794106245040894,0.1246984526515007,0.4480125308036804,-0.03456461429595947,-0.07878705859184265,0.3541408181190491,0.04102228581905365],[0.03366922214627266,-0.0917956605553627,0.05241668224334717,0.20309431850910187,-0.08456724137067795,-0.11244416236877441,0.12389658391475677,-0.09270426630973816,-0.28339505195617676,0.002490624785423279,-0.15892191231250763,-0.04415666684508324,-0.24960504472255707,0.35459327697753906,0.43777745962142944,-0.06470518559217453,0.38335686922073364,-0.08665543794631958,-0.16675005853176117,0.19518829882144928,-0.0027459412813186646,-0.00635398318991065,-0.36914727091789246,-0.20000842213630676,0.08950476348400116,0.09728408604860306,0.04286394640803337,0.02734462544322014,-0.11258408427238464,0.0905962660908699,-0.07600130140781403,0.09858830273151398,-0.13919846713542938,-0.18428069353103638,-0.13364680111408234,0.14070969820022583,-0.05343931168317795,0.20071685314178467,0.03449246287345886,0.5458054542541504,0.1981014460325241,0.27800795435905457,-0.01822705566883087,0.2011042684316635,0.010451659560203552,0.015269884839653969,-0.06388577818870544,0.2665026783943176,-0.07893699407577515,-0.05643148720264435,0.12996232509613037,-0.0008497423841618001,-0.03716900944709778,0.12864308059215546,-0.10828353464603424,0.06597661972045898,0.6073127388954163,-0.08460240066051483,-0.004929474554955959,0.34854060411453247,0.055658310651779175,0.0704614669084549,0.006658835802227259,0.18475091457366943],[0.3060171604156494,-0.8180226683616638,0.2618151903152466,0.2567465603351593,0.22029633820056915,-0.008887618780136108,0.04635480046272278,0.32347577810287476,0.20937584340572357,-0.021719396114349365,0.3368035852909088,0.3605664372444153,0.18477433919906616,0.22465291619300842,0.37107113003730774,0.3246647119522095,0.3640960156917572,-0.036986932158470154,0.3710891604423523,0.37724554538726807,0.08733963966369629,0.4265415072441101,0.2404770702123642,0.36193814873695374,0.2611759603023529,0.1773868054151535,0.2672423720359802,0.3386172950267792,0.2328975349664688,-0.9429926872253418,0.3351607620716095,0.05229972302913666,0.4584072232246399,0.3672584295272827,0.34641891717910767,0.4626282751560211,0.2980979382991791,0.238636314868927,-0.11680638790130615,0.3659532070159912,0.3091166913509369,-0.4143353998661041,-0.1003134697675705,0.36893799901008606,0.007845848798751831,-0.015417594462633133,-0.036753296852111816,0.3539125323295593,0.8390488624572754,0.13195613026618958,0.1374853253364563,0.3456713855266571,-0.0012073367834091187,0.3413807153701782,-0.6265450119972229,-0.05237884819507599,0.24221932888031006,0.2636716365814209,0.4172622263431549,0.1728823333978653,-0.03852255642414093,0.0678437128663063,0.25186648964881897,0.4381885826587677],[0.22483643889427185,-1.1512748003005981,0.3193318843841553,0.28359857201576233,0.10050409287214279,0.05406107008457184,0.04529517889022827,0.17917793989181519,0.4339587092399597,-0.10615067183971405,0.3734685182571411,0.1733831912279129,0.27923089265823364,0.23734401166439056,0.325325071811676,0.25704050064086914,0.17958039045333862,0.05954881012439728,0.18514792621135712,0.18472939729690552,0.03976590931415558,0.2312326431274414,0.19358229637145996,0.32739487290382385,0.12751121819019318,0.2752898037433624,0.15560227632522583,0.2491310089826584,0.18654637038707733,-1.2409753799438477,0.17870791256427765,-0.05705319344997406,0.44219672679901123,0.40149199962615967,0.19201700389385223,0.25095751881599426,0.3201570510864258,0.1566578894853592,0.041257843375205994,0.2469242960214615,0.212648406624794,-0.8559080362319946,-0.038138095289468765,0.26338088512420654,-0.07055686414241791,-0.02607857622206211,-0.07035400718450546,0.3203609883785248,0.5622515678405762,-0.04896268993616104,0.13606798648834229,0.2595815658569336,-0.08130533993244171,0.4082491099834442,-0.4291064739227295,0.09610974788665771,0.08534985780715942,0.3398900628089905,0.22446314990520477,0.08897504210472107,-0.07041776180267334,0.10736367851495743,0.24005389213562012,0.37725576758384705],[0.06930902600288391,-0.8488004207611084,0.3434763252735138,0.19469766318798065,0.1437598317861557,0.07775215804576874,0.0047483891248703,0.23619990050792694,0.41382843255996704,0.04286570847034454,0.2332700490951538,0.2792235314846039,0.3575243353843689,0.19880051910877228,0.5377192497253418,0.2284138798713684,0.3755642771720886,-0.022386834025382996,0.27527958154678345,0.3127260208129883,-0.018835365772247314,0.30809468030929565,0.13483622670173645,0.1917891949415207,0.311883807182312,0.2096613645553589,0.13515517115592957,0.3183540105819702,0.27499938011169434,-0.7842934131622314,0.16848725080490112,0.006308615207672119,0.2944459021091461,0.40033113956451416,0.17403367161750793,0.1329597532749176,0.19145400822162628,-0.054988618940114975,-0.06075355410575867,0.23468463122844696,0.2989715039730072,-0.5180281400680542,-0.03866523876786232,0.14820124208927155,0.10435444116592407,0.10119272768497467,0.03609207645058632,0.16109593212604523,0.680992603302002,-0.0684879869222641,0.039905011653900146,0.06367909908294678,0.014682574197649956,0.3075355291366577,-0.6610112190246582,0.04805545508861542,0.008769278414547443,0.27668243646621704,0.13385124504566193,0.12609870731830597,0.08354480564594269,0.025836357846856117,0.16411340236663818,0.2251661866903305],[0.2836514115333557,-0.15059025585651398,0.2034764587879181,0.13495264947414398,0.26589593291282654,-0.011312440037727356,-0.01937168836593628,0.11041362583637238,0.14656414091587067,-0.11569042503833771,-0.0016818791627883911,0.10669700801372528,0.0985579714179039,0.14088645577430725,0.4045232832431793,0.09570334851741791,0.18184953927993774,0.0832357108592987,0.14762499928474426,0.2927015423774719,-0.1182214766740799,0.36769020557403564,0.15077556669712067,-0.10786542296409607,0.1645229309797287,0.1318710446357727,0.2892187535762787,0.1771450638771057,0.05857059359550476,-0.6709054112434387,0.1731320023536682,-0.05013422667980194,0.09091095626354218,0.10856887698173523,0.16583390533924103,0.4204627275466919,-0.03332175686955452,0.16316816210746765,0.0477382093667984,0.38617444038391113,0.34162992238998413,-0.02861841209232807,-0.06037085875868797,0.13923704624176025,0.007519885897636414,-0.049424972385168076,-0.08947689831256866,0.2435913383960724,0.7306770086288452,0.043569087982177734,0.029879527166485786,0.481395423412323,0.09042103588581085,0.3345392048358917,-0.28484129905700684,0.09672081470489502,0.15227088332176208,0.21305210888385773,0.33214372396469116,0.07466832548379898,0.019607648253440857,0.07629881799221039,0.19217683374881744,0.2480364590883255],[0.3238878548145294,-0.7717287540435791,0.13974903523921967,0.13049758970737457,0.30688464641571045,0.0932031124830246,0.0705626904964447,0.37369227409362793,0.1819993108510971,-0.08855827152729034,0.16361388564109802,0.17920981347560883,0.24918921291828156,0.09477561712265015,0.5244454741477966,0.4131585657596588,0.19877126812934875,-0.05286003649234772,0.11256169527769089,0.43396878242492676,-0.0949421226978302,0.35795384645462036,0.05284876748919487,0.3763934075832367,0.5233611464500427,0.14989571273326874,0.46068114042282104,0.2926337718963623,0.21459639072418213,-0.43361496925354004,0.22171495854854584,0.07637523114681244,0.35030344128608704,0.08551400154829025,0.34742382168769836,0.5291951298713684,0.20982617139816284,0.10236647725105286,-0.09201999008655548,0.13303020596504211,0.08137116581201553,0.4214745759963989,0.03266357630491257,0.2570764422416687,-0.12014329433441162,-0.014347170479595661,0.029969990253448486,0.25164374709129333,0.8915346264839172,0.13936631381511688,0.12151487916707993,0.521102786064148,-0.03699824959039688,0.28181836009025574,-1.0389072895050049,0.021693602204322815,0.3750498592853546,0.21174131333827972,0.34736692905426025,0.2292695790529251,0.12011022865772247,0.05708175525069237,0.3604719042778015,0.20826081931591034],[-0.07001127302646637,0.009717941284179688,0.0832681655883789,-0.027756735682487488,-0.11718334257602692,-0.08258973062038422,-0.10935540497303009,-0.014261230826377869,-0.00356505811214447,0.020699530839920044,-0.11259225010871887,-0.11251562833786011,-0.053427040576934814,-0.004139959812164307,0.09052716195583344,-0.06745795905590057,0.020991504192352295,-0.10024221241474152,-0.0332709401845932,-0.10951709747314453,0.047827333211898804,-0.02118222415447235,-0.04364307224750519,-0.09554225206375122,-0.033754944801330566,-0.002456963062286377,0.017559319734573364,0.11201854050159454,0.0865848958492279,0.10052335262298584,-0.06274877488613129,-0.11011478304862976,0.006574526429176331,0.009823709726333618,0.12014460563659668,0.003634810447692871,-0.06955908238887787,0.09902329742908478,0.08779974281787872,-0.07439915835857391,0.022608354687690735,0.0071485936641693115,0.0559748113155365,0.08840231597423553,0.09688501060009003,-0.03821262717247009,0.08993259072303772,-0.10621529817581177,0.010688021779060364,0.07927869260311127,-0.003578200936317444,-0.04394908249378204,0.008954912424087524,-0.05061221122741699,-0.06306144595146179,-0.10308921337127686,-0.11047884821891785,0.06446564197540283,-0.12044553458690643,0.09151840209960938,0.008201614022254944,-0.011713594198226929,0.024890393018722534,0.02472950518131256],[0.2230614423751831,-0.7367855906486511,0.0350826270878315,0.1354040950536728,0.2199881225824356,0.025387927889823914,-0.0048372745513916016,0.07789688557386398,0.09786457568407059,-0.06263239681720734,0.2639545798301697,0.36463069915771484,0.295138418674469,0.2465195506811142,0.39720916748046875,0.30813005566596985,0.189430370926857,-0.08869969844818115,0.15561120212078094,0.4623679220676422,-0.08990029990673065,0.37495094537734985,0.10092391073703766,0.2864738702774048,0.45917701721191406,0.27717065811157227,0.35594579577445984,0.3304004371166229,0.050611820071935654,-0.8072922229766846,0.08668346703052521,0.07723784446716309,0.2820548117160797,0.05600273981690407,0.4333685636520386,0.5002482533454895,0.2241048812866211,0.1619332730770111,-0.0871354341506958,0.3500296175479889,0.22786079347133636,0.0434756837785244,-0.02240724302828312,0.16286788880825043,-0.0017108023166656494,-0.04396333172917366,0.03352911397814751,0.2340134084224701,0.9417529702186584,0.06506960093975067,0.09800463914871216,0.5240921974182129,0.02080664038658142,0.41202908754348755,-0.7772659063339233,-0.10862687230110168,0.4658503532409668,0.2003450244665146,0.36658114194869995,0.27919384837150574,-0.08176922798156738,0.04969635605812073,0.40785157680511475,0.38922634720802307],[-0.03286774083971977,0.0593656450510025,-0.07009006291627884,-0.06989400833845139,-0.18466176092624664,0.07601843774318695,0.08805610239505768,-0.0049230558797717094,-0.07142113894224167,0.11402547359466553,-0.04462968558073044,-0.0567580908536911,-0.04859405383467674,0.0820775032043457,0.0635748952627182,-0.062046099454164505,0.0020377507898956537,-0.10925526916980743,-0.06144777312874794,0.03938678652048111,-0.0619787722826004,0.0120411217212677,-0.06444945186376572,-0.14756561815738678,0.03903712332248688,-0.12221051752567291,0.01296648383140564,-0.11704463511705399,-0.003466889960691333,0.11204424500465393,-0.04927647486329079,-0.06506682932376862,0.039944108575582504,-0.1984395831823349,-0.08555878698825836,0.014393388293683529,0.035008858889341354,0.03833650425076485,-0.11577475070953369,0.14246699213981628,-0.06137798726558685,0.09116971492767334,0.014180452562868595,0.07731714099645615,-0.04053157567977905,0.12273718416690826,0.04447004199028015,0.05721437186002731,-0.07073154300451279,0.09386184811592102,-0.06237933412194252,0.09029754996299744,-0.005008339881896973,0.04805270582437515,-0.04104055091738701,-0.019904017448425293,-0.03722295165061951,0.01868458092212677,-0.12182272225618362,0.02045227214694023,0.03122715651988983,0.006398518104106188,0.043955035507678986,-0.05363302305340767],[-0.03549221158027649,0.07438434660434723,-0.12063811719417572,0.12143254280090332,-0.04990682005882263,0.1131175309419632,-0.027360960841178894,0.013795047998428345,-0.08345618844032288,0.12246446311473846,-0.004281967878341675,-0.07085412740707397,-0.002660036087036133,-0.019419610500335693,0.0958670973777771,-0.05734242498874664,0.008734986186027527,0.0644344836473465,0.07561717927455902,-0.03962735831737518,0.1047196090221405,-0.021654322743415833,-0.07850511372089386,0.04532381892204285,-0.06014642119407654,-0.04624515771865845,0.0995735228061676,-0.11236950755119324,-0.11362871527671814,0.03689303994178772,0.10200309753417969,0.015494465827941895,0.11761049926280975,-0.04223671555519104,0.09255117177963257,-0.094736248254776,-0.021587088704109192,-0.060846760869026184,-0.07809232175350189,-0.07366713881492615,-0.07237772643566132,0.06803727149963379,-0.006650447845458984,0.06150268018245697,0.10208581387996674,-0.12217746675014496,0.0047822147607803345,-0.03344018757343292,0.11854539811611176,-0.06464643776416779,0.03716704249382019,-0.12141609191894531,0.11849203705787659,0.012879908084869385,-0.043258294463157654,0.003687947988510132,-0.03890618681907654,0.00920093059539795,-0.06449787318706512,-0.054027095437049866,-0.0652356892824173,0.00190010666847229,-0.09966406226158142,0.00646364688873291],[0.29392653703689575,-0.5926073789596558,0.19740602374076843,-0.057814985513687134,0.19189853966236115,0.034135833382606506,-0.06445242464542389,0.1578880101442337,0.21439124643802643,-0.11278507113456726,0.1268477886915207,0.2807044982910156,0.3368264138698578,0.44752728939056396,0.6329485774040222,0.3832758665084839,0.36286720633506775,0.05839061737060547,0.2694167196750641,0.25214454531669617,0.10963033139705658,0.3984185755252838,0.33404093980789185,0.5385460257530212,0.37186357378959656,0.26591524481773376,0.24768327176570892,0.1828184574842453,0.1694193035364151,-0.36031579971313477,0.3847324252128601,0.04737439751625061,0.1877327263355255,0.3150835633277893,0.24902373552322388,0.2183321714401245,0.2992120087146759,-0.2130466103553772,0.021297946572303772,0.3341121971607208,0.366917222738266,0.03275306150317192,0.03781692311167717,0.21684107184410095,0.006459623575210571,-0.15665967762470245,-0.07596195489168167,0.14820055663585663,0.8517469763755798,-0.0782940536737442,0.09368284791707993,-0.15802878141403198,0.13320335745811462,0.20980405807495117,-1.2746481895446777,0.02344810962677002,-0.0032430209685117006,0.40188518166542053,0.05301884561777115,0.31043416261672974,-0.11253254115581512,0.06965616345405579,0.2198684811592102,0.11757462471723557],[0.07063038647174835,0.07321804016828537,-0.08525755256414413,-0.08079565316438675,0.09959136694669724,-0.061763763427734375,-0.030119791626930237,-0.04629233106970787,0.06395112723112106,-0.07491004467010498,0.019079288467764854,-0.07406590133905411,0.012974601238965988,-0.08964051306247711,-0.0852089673280716,0.0622112974524498,-0.035285547375679016,-0.09533025324344635,-0.06993100792169571,-0.06596706062555313,0.09308768808841705,0.09068429470062256,0.045069921761751175,0.04440707713365555,0.06281697005033493,-0.1255224347114563,-0.11245100200176239,0.0053917220793664455,0.040879301726818085,0.059992194175720215,-0.07553350180387497,-0.11798414587974548,-0.03987313434481621,-0.1046643853187561,-0.08982346206903458,-0.10331475734710693,-0.11639633774757385,-0.0880562961101532,-0.11553218960762024,-0.04880606010556221,0.11652199178934097,-0.044105805456638336,0.11914685368537903,0.012036996893584728,-0.02554573118686676,0.027458518743515015,-0.09265360236167908,-0.0229268167167902,-0.12453127652406693,-0.0768188089132309,-0.12804344296455383,-0.09768840670585632,-0.010364517569541931,-0.11823932826519012,0.02506229467689991,0.06262889504432678,0.007499378174543381,-0.03164416924118996,-0.08738164603710175,-0.11048614978790283,0.10464440286159515,-0.09447966516017914,0.08934762328863144,-0.10257456451654434],[0.1403917819261551,-0.1270282119512558,-0.13486915826797485,0.2289959192276001,0.06369329243898392,-0.06774355471134186,-0.02438703179359436,-0.12816280126571655,-0.18270713090896606,0.053785741329193115,0.017402369529008865,-0.0552063025534153,-0.24015595018863678,0.3461589217185974,0.29839256405830383,-0.11317329108715057,0.4397788941860199,0.03682810068130493,-0.2825460135936737,0.19313380122184753,0.07079359889030457,-0.029073987156152725,-0.42356786131858826,-0.08471804112195969,0.06383669376373291,0.1339278668165207,0.23782896995544434,0.00403892295435071,-0.22553840279579163,-0.015034551732242107,-0.0957508534193039,-0.009065210819244385,-0.08038781583309174,-0.29352542757987976,-0.20199152827262878,0.1586705446243286,-0.015856191515922546,0.2956447899341583,-0.07747802138328552,0.567495584487915,0.3254550099372864,0.4608795940876007,0.06197480112314224,0.02232455648481846,0.021887362003326416,-0.03202067315578461,-0.03288467228412628,0.2422952651977539,-0.2150641679763794,-0.10818178951740265,-0.060164131224155426,0.24538689851760864,0.028990671038627625,0.17972475290298462,0.0372084379196167,-0.022938132286071777,0.7081395387649536,-0.07442480325698853,0.03911340609192848,0.30494919419288635,-0.036352768540382385,0.09740972518920898,0.1380070000886917,0.1214614287018776],[0.0587063804268837,-0.1075357049703598,0.0029008984565734863,-0.09015365689992905,0.0836661159992218,0.08773046731948853,0.002565622329711914,0.013287412002682686,-0.031088268384337425,-0.06334654986858368,-0.12958861887454987,0.05787360295653343,-0.04606457054615021,0.0350881963968277,-0.0020400930661708117,-0.1375727504491806,0.034311678260564804,-0.02368248999118805,-0.14329233765602112,0.08779817819595337,-0.025075361132621765,0.054308123886585236,-0.18550865352153778,0.0022042421624064445,-0.13056015968322754,-0.06348271667957306,0.006389612331986427,-0.061241164803504944,-0.12250276654958725,0.08173549175262451,-0.14365139603614807,-0.08082665503025055,-0.07575318217277527,-0.11688105016946793,-0.014053307473659515,0.13090400397777557,0.07434267550706863,0.028878511860966682,-0.07721136510372162,-0.06576722860336304,-0.09588485211133957,-0.047060392796993256,0.09119819104671478,-0.07961312681436539,0.08466176688671112,0.06950433552265167,0.11638611555099487,0.007388563361018896,0.011094162240624428,-0.006024956703186035,0.055082064121961594,0.02397213876247406,0.07331839203834534,0.02328009344637394,0.05645359307527542,-0.059974998235702515,0.1589675396680832,-0.06822263449430466,0.06949515640735626,0.18459664285182953,-0.08079007267951965,0.0415666326880455,-0.15002989768981934,0.13706502318382263],[-0.14193356037139893,0.029736801981925964,0.07976248115301132,-0.08944463729858398,-0.039217643439769745,0.05952751636505127,-0.05465637147426605,-0.011345245875418186,0.08020377159118652,0.04444067180156708,-0.08802803605794907,-0.024286765605211258,-0.07744564116001129,-0.09867404401302338,-0.1382238268852234,-0.012579790316522121,-0.029253752902150154,0.017089620232582092,-0.10373345017433167,-0.03855397552251816,-0.07886207103729248,0.08502721041440964,-0.13362134993076324,-0.04254753515124321,0.09628438949584961,-0.05179886147379875,-0.1114824116230011,0.0996897891163826,0.05319511517882347,0.030143558979034424,0.09966062009334564,0.055580317974090576,-0.08093146979808807,0.1363222599029541,0.06226201727986336,-0.01622919552028179,-0.0453374944627285,-0.09877606481313705,-0.11059242486953735,-0.04581841826438904,-0.06135139986872673,0.024681225419044495,0.063716821372509,0.062341585755348206,-0.12291334569454193,-0.051656343042850494,-0.03614366054534912,-0.07106772065162659,-0.006512484047561884,-0.004644542932510376,-0.10813261568546295,-0.09435302019119263,0.06382434070110321,-0.0037845273036509752,0.11205724626779556,-0.005929678678512573,-0.002334761666134,0.0833762139081955,-0.12563344836235046,-0.0727103054523468,0.0745888352394104,-0.06014449521899223,-0.06826265901327133,-3.1016657885629684e-05],[0.24544285237789154,-1.1707340478897095,0.2055438905954361,0.2645725607872009,0.10582773387432098,0.10164867341518402,0.017873749136924744,-0.01755261979997158,0.2628512680530548,0.02652539312839508,0.09732390195131302,0.2120855301618576,-0.008593807928264141,0.305342435836792,0.4824862778186798,0.14413495361804962,0.23983244597911835,0.08114594221115112,0.25028836727142334,0.20244139432907104,0.05649292469024658,0.3745689392089844,-0.07198143750429153,0.15975448489189148,0.29661524295806885,0.2844026982784271,0.18629279732704163,0.22949686646461487,-0.05972002446651459,-1.0388031005859375,0.3279390037059784,0.03845953941345215,0.24174974858760834,0.03584109991788864,0.22484749555587769,0.1663624793291092,0.25610172748565674,0.08495395630598068,0.013579219579696655,0.35978758335113525,0.15901075303554535,-0.5186678171157837,-0.052371129393577576,0.1972123384475708,-0.034285709261894226,0.018972720950841904,0.11871937662363052,0.28290069103240967,0.730695903301239,0.07166296988725662,0.04677974805235863,0.37683966755867004,0.13069108128547668,0.18140888214111328,-0.6954867243766785,-0.08858320116996765,0.1360962688922882,0.2511514723300934,0.10962589830160141,0.30053821206092834,-0.09686554968357086,-0.09775257110595703,0.366355299949646,0.2817467153072357],[0.262098491191864,-0.8668335676193237,0.13175615668296814,0.2291688770055771,0.15122584998607635,0.07840213179588318,-0.012728482484817505,0.3019677400588989,0.33593443036079407,0.05398845672607422,0.3745611608028412,0.18851052224636078,0.3367229104042053,0.2889622449874878,0.6050310134887695,0.4508340358734131,0.20900200307369232,-0.03031797707080841,0.23876431584358215,0.34371423721313477,0.11774782836437225,0.20058183372020721,0.30775710940361023,0.3357270658016205,0.3623794913291931,0.396766722202301,0.22273671627044678,0.24237647652626038,0.2840370833873749,-0.8889333605766296,0.2283077985048294,-0.04385693371295929,0.2867647111415863,0.24061809480190277,0.3089306354522705,0.24163678288459778,0.3164404630661011,-0.046108368784189224,-0.1237783432006836,0.3422723710536957,0.3431335687637329,-0.4966052174568176,-0.00045225193025544286,0.19629688560962677,0.10782387852668762,0.09681051224470139,0.14058400690555573,0.230010986328125,0.6475353240966797,0.030616967007517815,0.060840923339128494,0.158109650015831,0.06876645982265472,0.31000152230262756,-0.7766226530075073,0.10387882590293884,-0.0029848723206669092,0.2589581608772278,0.21341973543167114,0.17843948304653168,-0.05586835741996765,-0.11724703013896942,0.3553470969200134,0.1516321301460266],[0.0971379354596138,0.07540485262870789,-0.03139756619930267,-0.06601722538471222,0.05212599039077759,0.09095437824726105,0.10491977632045746,-0.1172621101140976,0.06398925185203552,0.011359035968780518,-0.061407025903463364,-0.008338210172951221,0.07531985640525818,-0.10798691213130951,0.0902993381023407,-0.027646072208881378,0.037846196442842484,0.11739300191402435,-0.10866980254650116,-0.11220017820596695,0.05855970084667206,-0.05985421687364578,-0.012128368020057678,-0.09527981281280518,-0.013112612068653107,-0.02444230578839779,0.09615731239318848,-0.049740251153707504,-0.06479883193969727,-0.08977676928043365,-0.003978222608566284,-0.11001716554164886,0.002351336181163788,-0.06295090913772583,0.05250187963247299,-0.03488437086343765,-0.09517422318458557,-0.043161146342754364,-0.11337672173976898,0.03153954818844795,0.06098759174346924,-0.016134008765220642,0.03988166153430939,0.01189425215125084,0.011236488819122314,-0.11300425231456757,-0.0005938708782196045,-0.04286857321858406,0.06436264514923096,-0.060841068625450134,0.07583820819854736,-0.12075401842594147,-0.041947558522224426,0.005992238409817219,0.08497391641139984,0.10128580033779144,-0.08297458291053772,0.025651048868894577,0.06616666167974472,0.02264086902141571,0.03421872854232788,-0.006800204515457153,-0.06635655462741852,-0.008568968623876572],[-0.046911001205444336,0.06779289245605469,0.09365136921405792,-0.11521648615598679,0.11167775094509125,0.09090085327625275,0.091391921043396,0.1196439191699028,-0.0747368186712265,0.011522248387336731,-0.09992074966430664,0.03542390465736389,-0.09155860543251038,0.06329724937677383,0.07041227072477341,-0.040718890726566315,0.01823035627603531,-0.10314194858074188,-0.06697311252355576,-0.06980804353952408,0.058664679527282715,0.0794655978679657,-0.05399851128458977,-0.08680263161659241,-0.11591963469982147,-0.08282345533370972,-0.11924267560243607,0.029687583446502686,-0.1128910630941391,-0.048426881432533264,-0.08876296132802963,-0.11841101944446564,-0.12349170446395874,0.0742063820362091,-0.06242822855710983,-0.09278591722249985,0.09991239011287689,0.10425954312086105,-0.09725584089756012,-0.014457358978688717,0.016068173572421074,0.05034492537379265,0.05037975311279297,-0.13394497334957123,0.08843152225017548,-0.014115347526967525,-0.03155526518821716,0.026293465867638588,-0.05117972195148468,-0.06134961545467377,-0.08831897377967834,-0.11981815099716187,-0.0695171058177948,-0.07070208340883255,-0.02186019904911518,0.019871532917022705,-0.13745637238025665,0.013215655460953712,-0.0036583116743713617,-0.03398747742176056,0.07819020748138428,-0.05289342999458313,0.09960472583770752,0.0780380368232727],[0.054669976234436035,-0.0899648517370224,-0.0850842148065567,0.011019870638847351,0.03420150279998779,0.05527682602405548,0.09172190725803375,-0.08610932528972626,0.008109524846076965,0.010676607489585876,-0.02807438373565674,-0.0956992357969284,-0.11112041771411896,0.06319770216941833,0.10916253924369812,0.04467688500881195,0.0896223932504654,0.10477523505687714,-0.046676233410835266,-0.022021308541297913,-0.03927125036716461,0.11117033660411835,-0.12167394161224365,-0.04634392261505127,0.08104293048381805,-0.0794609785079956,-0.017672643065452576,0.08190926909446716,0.0914757251739502,0.11383363604545593,-0.043914780020713806,0.0880143940448761,-0.12013943493366241,0.11914068460464478,-0.049894779920578,0.08825194835662842,-0.06850090622901917,-0.0816773772239685,0.06446890532970428,0.07362304627895355,-0.04163689911365509,0.0017828643321990967,-0.12312723696231842,-0.06358596682548523,0.003847360610961914,0.07600557804107666,0.0971183329820633,0.11215002834796906,0.0768730491399765,-0.10742130875587463,-0.10386858880519867,-0.042594313621520996,-0.06598053872585297,0.03488388657569885,-0.024548351764678955,-0.035571590065956116,-0.12125086784362793,0.07014204561710358,-0.07025842368602753,-0.09725956618785858,-0.0653449147939682,-0.08934341371059418,-0.04510843753814697,0.015613645315170288],[-0.11458909511566162,0.046136945486068726,0.014528210274875164,0.09494239836931229,-0.13272607326507568,-0.030290842056274414,-0.01262955367565155,0.03033924102783203,0.04743655025959015,0.07138027250766754,-0.017595455050468445,-0.0844966471195221,-0.007703488226979971,-0.006642630323767662,0.09334563463926315,0.0010735716205090284,0.09927566349506378,-0.026362493634223938,0.07547003775835037,-0.11943305283784866,-0.04581291973590851,0.05861691012978554,0.08898910135030746,-0.13936634361743927,0.025081390514969826,0.07959257066249847,-0.040272485464811325,0.03671904280781746,0.09364818036556244,-0.10507100820541382,-0.04948228597640991,-0.10356001555919647,-0.013156372122466564,0.018726080656051636,-0.03936474770307541,0.08759438991546631,-0.03670187667012215,0.07501164823770523,-0.022616058588027954,0.06266390532255173,-0.11461403220891953,-0.07037166506052017,-0.10910354554653168,0.02522256039083004,0.06905858218669891,-0.014096719212830067,-0.11670468747615814,0.06163192167878151,-0.039991412311792374,0.08253437280654907,0.012135621160268784,-0.122007817029953,0.10767391324043274,-0.0637480765581131,0.0005269672838039696,-0.031951189041137695,0.03846755996346474,-0.01642918959259987,-0.035977985709905624,-0.017107801511883736,0.03413484990596771,-0.017719611525535583,-0.012989906594157219,0.055652450770139694],[0.0038380511105060577,-0.12178850173950195,0.0211163442581892,-0.1049564778804779,0.07139679044485092,0.011856898665428162,0.11596019566059113,-0.006138211116194725,0.014434981159865856,0.04577033221721649,-0.12740641832351685,-0.0487496592104435,-0.13305127620697021,0.031257037073373795,-0.008360237814486027,0.023433607071638107,0.10253288596868515,-0.06749436259269714,-0.013823125511407852,0.0016905911033973098,0.020588219165802002,-0.026782797649502754,-0.05256705358624458,0.08234060555696487,0.034786585718393326,0.028164809569716454,-0.06517859548330307,0.09593196213245392,-0.044627293944358826,-0.10018910467624664,-0.12360546737909317,0.10350082814693451,0.058238305151462555,-0.08165652304887772,0.04631051793694496,-0.050346411764621735,0.06863975524902344,-0.03669419884681702,0.056962743401527405,0.10792998969554901,-0.017971999943256378,0.022938823327422142,-0.07543343305587769,0.02101840078830719,-0.02028331160545349,0.11498680710792542,0.12246762216091156,-0.12493253499269485,-0.029555372893810272,-0.03062465786933899,-0.08056513965129852,0.00811678171157837,-0.08913135528564453,-0.14132079482078552,-0.11681640893220901,-0.12272514402866364,-0.1362912803888321,-0.061746031045913696,-0.10656902194023132,-0.061951346695423126,0.0439363569021225,0.03148201107978821,0.005611644126474857,-0.08251994103193283],[0.1645929366350174,-0.803108811378479,0.14475710690021515,0.14022062718868256,0.08871881663799286,0.10954651236534119,-0.06213492155075073,0.15344123542308807,0.2607891261577606,-0.01415213942527771,0.17493996024131775,0.04885035753250122,0.18885868787765503,0.3048580288887024,0.284538209438324,0.33172670006752014,0.32461196184158325,0.03029276430606842,0.30799105763435364,0.1144261509180069,0.09245532751083374,0.18859373033046722,0.2513803541660309,0.20112521946430206,0.050934918224811554,0.14528942108154297,0.06581618636846542,0.2785201370716095,0.16638711094856262,-1.0570136308670044,0.07231458276510239,-0.008423194289207458,0.2823946475982666,0.35032767057418823,0.19472350180149078,0.1723598837852478,0.09486235678195953,-0.15195724368095398,0.08692321181297302,0.17869512736797333,0.2653026580810547,-0.9304069876670837,-0.07331813871860504,0.16291263699531555,0.06333911418914795,0.08343162387609482,0.12402567267417908,0.09969471395015717,0.42256876826286316,0.14178761839866638,0.044455986469984055,0.1615428328514099,0.0909203588962555,0.07179219275712967,-0.3869535028934479,-0.07143272459506989,-0.13941071927547455,0.17687594890594482,0.2638048827648163,0.16579745709896088,0.0014046579599380493,0.026816973462700844,0.3371705710887909,0.19179224967956543],[0.07737269997596741,-0.1701955646276474,0.031799133867025375,0.07582436501979828,0.034660302102565765,-0.05914057791233063,0.12087784707546234,-0.11356902867555618,-0.20404846966266632,-0.004994034767150879,-0.0392988845705986,0.10716837644577026,-0.21564199030399323,0.4417109489440918,0.5762309432029724,-0.23609888553619385,0.5253019332885742,-0.09528844058513641,-0.3204111158847809,0.09934695810079575,0.07439440488815308,0.033112626522779465,-0.5513859391212463,-0.21431951224803925,0.16725628077983856,0.20655834674835205,0.2899985909461975,-0.04224814102053642,-0.1687999665737152,-0.09580021351575851,-0.17151078581809998,-0.05592122673988342,-0.021071430295705795,-0.34962865710258484,-0.2560030519962311,0.22003263235092163,0.04841013252735138,0.44681674242019653,-0.09563103318214417,0.4776643216609955,0.2291005253791809,0.40163692831993103,-0.0776403397321701,0.15279492735862732,-0.058877840638160706,-0.03195891156792641,0.07802741229534149,0.14510120451450348,0.08806086331605911,-0.09577146172523499,0.1295180767774582,0.4540407061576843,0.07573001086711884,0.21234409511089325,0.19272074103355408,-0.11487707495689392,0.579308032989502,0.07953591644763947,0.05517728254199028,0.530597448348999,0.04744471609592438,0.024805862456560135,0.14042958617210388,0.38451269268989563],[0.3576255142688751,-0.8082937598228455,0.11181334406137466,0.10319671779870987,0.27307558059692383,-0.048111289739608765,-0.06408855319023132,0.19156897068023682,0.36240994930267334,0.04650010168552399,0.4103699326515198,0.2680692970752716,0.4408508241176605,0.3793279230594635,0.6098018884658813,0.4017751216888428,0.2669913172721863,-0.024101585149765015,0.4171212315559387,0.30581727623939514,-0.12424904108047485,0.4179409146308899,0.32013702392578125,0.3911888897418976,0.3225182592868805,0.3506699204444885,0.14977912604808807,0.38045749068260193,0.10540824383497238,-0.6139198541641235,0.46110230684280396,-0.08671706914901733,0.2775433659553528,0.2700774371623993,0.27850547432899475,0.23896361887454987,0.21646703779697418,-0.21039558947086334,-0.06266577541828156,0.22526995837688446,0.19526861608028412,-0.24410280585289001,0.06792019307613373,0.3024221658706665,0.05563804507255554,-0.003692022757604718,0.029595989733934402,0.14466576278209686,0.7909273505210876,0.0022586840204894543,0.15897220373153687,0.01777428202331066,-0.0060346066020429134,0.2009899616241455,-1.2228918075561523,-0.01601649820804596,0.08290453255176544,0.3453407287597656,0.25838789343833923,0.18283896148204803,0.11782057583332062,0.034575413912534714,0.196027010679245,0.3106224536895752],[0.06593133509159088,0.04242555797100067,-0.011156359687447548,0.07601288706064224,-0.09447479248046875,-0.08338358998298645,0.04684162139892578,0.08150377124547958,-0.047509290277957916,0.06542730331420898,0.05972311273217201,0.0699026957154274,0.007056572940200567,-0.10784758627414703,0.1020784005522728,0.020521586760878563,0.10963518172502518,-0.004878491163253784,-0.0011973187793046236,-0.08988278359174728,-0.00955154001712799,0.012734893709421158,0.07357673346996307,-0.05461522191762924,-0.025374315679073334,0.06485583633184433,-0.1307085156440735,0.08535192906856537,-0.059136100113391876,-0.018881753087043762,0.09060104936361313,-0.044696733355522156,0.037594202905893326,0.012854603119194508,-0.13264666497707367,-0.06207689642906189,-0.0859810933470726,-0.13108618557453156,0.0026739537715911865,-0.08295578509569168,0.06061868369579315,0.052202701568603516,-0.06353092193603516,-0.10835125297307968,-0.050048381090164185,0.06432266533374786,-0.10991036891937256,-0.11223675310611725,-0.12236741185188293,0.00917208194732666,0.01502867043018341,-0.10980650782585144,-0.10644395649433136,0.05023062229156494,-0.007252454292029142,0.07900381088256836,-0.08055513352155685,-0.12545841932296753,-0.02844107151031494,0.023224905133247375,0.05203677713871002,0.10132481157779694,-0.10195204615592957,0.03285065293312073],[0.22675563395023346,-0.5520176887512207,0.1846851408481598,0.19154226779937744,0.1543574184179306,0.10998067259788513,0.07370506227016449,0.22940514981746674,0.1334175020456314,-0.06332448124885559,0.06721718609333038,0.13422507047653198,0.11097344756126404,0.4236697554588318,0.7937613129615784,0.19528301060199738,0.396945595741272,0.11836685240268707,0.23118934035301208,0.2388651818037033,0.01704457402229309,0.34689050912857056,0.13362909853458405,0.31876879930496216,0.343843013048172,0.11776435375213623,0.3263635039329529,0.04491995647549629,0.15554183721542358,-0.04528498649597168,0.3010464608669281,-0.03999511897563934,0.1424742043018341,0.03127869591116905,0.14453451335430145,0.5199063420295715,0.16214868426322937,0.2500007152557373,0.1139523833990097,0.2173764854669571,0.3786369562149048,0.3363761305809021,0.014006858691573143,0.16836798191070557,0.10173030197620392,0.002589040668681264,-0.025606146082282066,0.23112422227859497,0.9658809900283813,-0.02654128149151802,0.2547975182533264,0.12093652039766312,-0.046445854008197784,0.3362919092178345,-1.2757526636123657,-0.11511711776256561,0.016528142616152763,0.23620644211769104,0.16986151039600372,0.5703707933425903,-0.046406716108322144,-0.08355483412742615,0.303682804107666,-0.002697831019759178],[-0.12007235735654831,0.07705920934677124,0.09049296379089355,0.010125706903636456,0.019301794469356537,-0.10201728343963623,-0.029650673270225525,0.07025536149740219,0.008147886022925377,-0.11161741614341736,0.07205584645271301,-0.118828684091568,0.08717790991067886,-0.11178870499134064,0.0313740074634552,-0.12210884690284729,-0.027445446699857712,0.0904577374458313,-0.012075555510818958,-0.017222333699464798,0.01809746026992798,0.04083986207842827,0.011678792536258698,0.03648759797215462,0.06794998794794083,0.05660665035247803,-0.07602627575397491,0.014980708248913288,-0.13345590233802795,0.08587819337844849,-0.11887476593255997,-0.017435282468795776,-0.13780361413955688,0.09295549988746643,-0.04922050982713699,0.014275099150836468,-0.03511573746800423,0.02607717737555504,0.10156731307506561,-0.12206868827342987,-0.03869675099849701,-0.04008674621582031,-0.08986331522464752,0.08440661430358887,-0.11274349689483643,0.052064016461372375,0.009421542286872864,-0.1260739266872406,-0.08986541628837585,-0.09477861225605011,0.0547393374145031,-0.025005772709846497,0.08403816819190979,0.09766710549592972,-0.04748949408531189,-0.08138829469680786,-0.00524216890335083,-0.006286956369876862,0.07862266153097153,-0.029653146862983704,0.0697309821844101,-0.017907440662384033,-0.13528525829315186,-0.12308471649885178],[0.017351312562823296,-0.09062130749225616,0.09194062650203705,-0.03441861644387245,-0.06891687214374542,-0.016502246260643005,-0.08779062330722809,-0.058228183537721634,0.0308048278093338,0.06628985702991486,0.04772030934691429,0.05126233771443367,0.038816433399915695,0.0741104781627655,0.007265839260071516,0.007394351530820131,-0.06186484172940254,-0.07332165539264679,-0.01045507937669754,-0.11935785412788391,-0.11325664818286896,0.06790655851364136,-0.033308252692222595,-0.10089559853076935,-0.011093481443822384,-0.07042291760444641,-0.06254969537258148,-0.1217087060213089,-0.01375692617148161,0.01515953242778778,0.10103510320186615,0.12200619280338287,-0.01139969564974308,0.03039749711751938,-0.0562753789126873,-0.023337313905358315,-0.09325460344552994,-0.054657645523548126,0.04812534153461456,0.04774977266788483,-0.027902090921998024,-0.03852032497525215,-0.06198913976550102,-0.12593011558055878,0.11620774865150452,0.03333832323551178,0.02709883451461792,-0.03549126163125038,0.032728422433137894,-0.055102765560150146,-0.06445850431919098,-0.07344041764736176,0.12355570495128632,0.022223778069019318,-0.08272220939397812,-0.05537444353103638,0.10614124685525894,0.11380677670240402,0.035386450588703156,0.004334776196628809,-0.04558746516704559,-0.042441051453351974,0.004517240449786186,0.09540648013353348],[-0.11116953939199448,-0.07115696370601654,0.03965812176465988,0.15467818081378937,-0.0934305489063263,-0.11660531163215637,-0.017885804176330566,-0.08437640964984894,-0.15648947656154633,-0.043274492025375366,-0.11296799778938293,0.0623108334839344,-0.19676995277404785,-0.06376170367002487,0.028870075941085815,-0.19732244312763214,0.06964518874883652,-0.1008482575416565,-0.10327859222888947,0.027263667434453964,-0.01730218529701233,-0.0854305624961853,-0.004818746354430914,-0.12413094937801361,-0.009751509875059128,0.04957502335309982,0.02997681125998497,-0.0662439838051796,-0.17839644849300385,0.002252548933029175,0.000978628289885819,0.1222960501909256,-0.03195954114198685,-0.08281924575567245,-0.1970861703157425,-0.057843875139951706,-0.15513676404953003,0.012987608090043068,-0.05585050582885742,0.15055198967456818,0.0911073386669159,0.039719756692647934,0.029202312231063843,0.1119365319609642,0.012901335954666138,-0.024201834574341774,0.0671447366476059,-0.08547710627317429,-0.05147433280944824,-0.10421927273273468,-0.07335726171731949,-0.02771495282649994,0.11274002492427826,0.08365168422460556,0.07541517913341522,0.09452652931213379,0.04803482070565224,0.04865031689405441,-0.021269038319587708,0.09125513583421707,-0.012616991996765137,-0.08433306217193604,0.12289559096097946,0.05906998738646507],[0.3837686777114868,-0.713390588760376,0.398186057806015,0.22523492574691772,0.3192991614341736,-0.09031927585601807,0.08008269965648651,0.13836213946342468,0.4438251554965973,-0.027546733617782593,0.2840529680252075,0.40577131509780884,0.4956180155277252,0.30435484647750854,0.5291717648506165,0.4652015268802643,0.3157767057418823,0.05363856256008148,0.32460394501686096,0.3274157643318176,0.09832587838172913,0.5107181668281555,0.2380964159965515,0.4852396249771118,0.4070732593536377,0.27810150384902954,0.3038327097892761,0.18779563903808594,0.17204612493515015,-0.6817851066589355,0.5220866799354553,0.006615549325942993,0.38461723923683167,0.31917357444763184,0.2924647033214569,0.43734803795814514,0.13861209154129028,-0.17557460069656372,-0.020643755793571472,0.21901649236679077,0.1693430095911026,0.04757284000515938,0.06859849393367767,0.19170302152633667,0.10404829680919647,0.0007182826520875096,0.06650462746620178,0.3826814293861389,0.7603422403335571,0.04112694039940834,0.28548815846443176,0.18453770875930786,-0.09012045711278915,0.3916458189487457,-1.1774293184280396,-0.10676728188991547,0.39284661412239075,0.4491625130176544,0.19159585237503052,0.12982513010501862,0.032750099897384644,0.09160954505205154,0.32566899061203003,0.355119913816452],[0.3512055575847626,-0.7454754710197449,0.13751080632209778,0.09190647304058075,0.07190556824207306,-0.03278455138206482,-0.02494063973426819,0.2787860035896301,0.24012094736099243,-0.01205192506313324,0.3263034224510193,0.18960951268672943,0.46314454078674316,0.42907214164733887,0.7076463103294373,0.34247657656669617,0.22527915239334106,-0.10809051990509033,0.3920484483242035,0.23097088932991028,-0.038200587034225464,0.28224486112594604,0.19357042014598846,0.3519219756126404,0.2974088191986084,0.2374892681837082,0.10930012911558151,0.1827380657196045,0.2320336103439331,-0.5855211615562439,0.2877366542816162,0.11232569813728333,0.32855623960494995,0.36273425817489624,0.3855070173740387,0.18091434240341187,0.2929132282733917,-0.27007418870925903,0.03818415105342865,0.1962457299232483,0.2322721928358078,0.007797323167324066,0.0007636151276528835,0.20191437005996704,0.06488384306430817,0.0023648631758987904,-0.0529254674911499,0.28461241722106934,0.6843357086181641,0.0006909424555487931,0.11073914170265198,-0.14369705319404602,0.03169278800487518,0.31859105825424194,-1.2123806476593018,0.0682688057422638,0.04155096411705017,0.326551616191864,0.2728305459022522,0.2554916739463806,0.04837554693222046,0.07874707132577896,0.22035959362983704,0.18478552997112274],[0.09113616496324539,-0.1777104288339615,0.02298775129020214,0.17801344394683838,0.0005372595624066889,0.07662343978881836,0.0694720596075058,-0.004931929986923933,-0.06721407175064087,-0.01613543927669525,0.01326879020780325,0.06534720957279205,-0.22582615911960602,0.510201632976532,0.09307486563920975,-0.1377996951341629,0.4542325735092163,0.0012992024421691895,-0.21630296111106873,0.24324476718902588,0.004495367407798767,0.12099476158618927,-0.33217883110046387,-0.2564844489097595,-0.05513063445687294,0.0783463791012764,0.08224514871835709,-0.11898336559534073,-0.13436871767044067,-0.20630809664726257,-0.10016164183616638,0.06366097927093506,-0.046633921563625336,-0.24663719534873962,-0.28750479221343994,0.18297357857227325,0.02481463924050331,0.20196478068828583,0.04913888871669769,0.5099658966064453,0.3904302418231964,-0.09933141618967056,-0.11631545424461365,-0.0328555703163147,-0.05019059777259827,0.13136571645736694,-0.10611148178577423,0.1830505132675171,-0.6047165989875793,-0.09130731225013733,-0.0853918045759201,0.09471378475427628,0.06879162788391113,0.23161786794662476,0.19523774087429047,-0.08694173395633698,0.4208347797393799,-0.16009710729122162,0.11346445232629776,0.6741682291030884,-0.09788721799850464,-0.008296692743897438,0.06862059235572815,0.175296351313591],[0.11646223813295364,0.05193275213241577,-0.10605680197477341,0.046756938099861145,-0.022357076406478882,0.11605092883110046,-0.1149071604013443,-0.10490493476390839,0.10860384255647659,-0.09652891755104065,0.014909944497048855,-0.12881796061992645,-0.03262391686439514,-0.05325886234641075,-0.08745142817497253,0.07974773645401001,0.01221919059753418,-0.03851135075092316,0.04890899732708931,-0.01839873567223549,0.1121102124452591,0.029153291136026382,-0.08217176795005798,0.07780012488365173,-0.048733118921518326,-0.07059615850448608,-0.10813303291797638,-0.1173701137304306,0.018843209370970726,-0.0865633487701416,0.013125717639923096,0.043197497725486755,0.012817746959626675,-0.11129088699817657,0.013183812610805035,0.0342554897069931,0.05824790149927139,-0.06671051681041718,-0.06553444266319275,-0.037368327379226685,0.023186013102531433,0.01686514914035797,0.06604592502117157,-0.09984967112541199,0.10385119915008545,-0.11113101243972778,-0.10981787741184235,-0.010242163203656673,-0.11481247842311859,0.10768838226795197,-0.11362925171852112,0.09344694018363953,0.05493427813053131,0.11390694230794907,-0.11510008573532104,0.028781786561012268,0.06797938048839569,-0.07835499942302704,-0.0650850236415863,0.010022372007369995,-0.05002288520336151,0.02720010280609131,0.03545774146914482,-0.026633501052856445],[0.04828225076198578,-0.09698808193206787,-0.10653216391801834,0.11737819761037827,-0.016671624034643173,-0.01514732837677002,-0.011649265885353088,-0.12064926326274872,-0.10593535006046295,-0.055555880069732666,0.05034239962697029,-0.07071215659379959,0.0022943317890167236,-0.027682101354002953,0.016919806599617004,-0.133421391248703,0.08689064532518387,0.08292870223522186,-0.11351722478866577,-0.1251240372657776,-0.029108449816703796,-0.006433606147766113,0.06643451750278473,-0.005556692834943533,0.04819143936038017,0.030191540718078613,-0.044016480445861816,-0.10530387610197067,0.04160603508353233,0.04673168063163757,0.012411285191774368,-0.12310309708118439,0.005766772199422121,0.10714489221572876,-0.006607729475945234,-0.07709846645593643,-0.0706215500831604,-0.0947217121720314,-0.018004387617111206,0.014499938115477562,0.0016998403007164598,-0.03770746290683746,0.00699123740196228,0.06521733105182648,-0.07639521360397339,-0.048295263200998306,-0.09333725273609161,-0.0016194090712815523,0.049712806940078735,0.027273952960968018,0.07005732506513596,-0.027660027146339417,0.032637327909469604,0.09097154438495636,-0.11886520683765411,-0.07044784724712372,0.0010294017847627401,-0.020968034863471985,-0.0935930609703064,0.11860058456659317,0.09717370569705963,-0.10134944319725037,-0.07011059671640396,0.11843303591012955],[-0.1010700985789299,-0.0010932385921478271,-0.044432636350393295,0.05406377837061882,-0.128170907497406,-0.10377749800682068,0.06436944007873535,0.009206261485815048,-0.009307215921580791,0.10854324698448181,-0.028038527816534042,-0.0030757689382880926,0.07600221782922745,-0.08962029218673706,-0.05195682495832443,0.05007099360227585,-0.05473790317773819,0.008501484990119934,-0.15031400322914124,-0.1229201927781105,0.11965946853160858,-0.005348255857825279,-0.15198378264904022,-0.14713813364505768,-0.06157003715634346,-0.06622104346752167,-0.08600635826587677,-0.011520074680447578,-0.14962877333164215,0.05663396418094635,-0.0027204614598304033,-0.06226721405982971,0.07267870754003525,0.018713105469942093,-0.04282324016094208,0.06507979333400726,0.06283988803625107,-0.07264038920402527,-0.0075244903564453125,0.03293702006340027,-0.0726088210940361,0.03310674801468849,0.05933035910129547,0.015471458435058594,0.028279438614845276,0.053915515542030334,-0.12114319205284119,0.02675534039735794,-0.14944443106651306,0.05657359957695007,0.029108237475156784,-0.07072792947292328,0.047781169414520264,-0.1465536504983902,0.009117841720581055,0.02989758551120758,-0.13521404564380646,-0.07353759557008743,-0.03141135349869728,0.02811073511838913,-0.0903598964214325,0.11614236235618591,0.06337142735719681,-0.015874464064836502],[0.0006581097841262817,0.08976149559020996,-0.06165565550327301,-0.12081754207611084,-0.017107799649238586,-0.02445077896118164,-0.0036379992961883545,0.12463107705116272,0.1102430522441864,0.05752044916152954,-0.031526997685432434,0.02492789924144745,0.10508143901824951,-0.07283706963062286,-0.1189454197883606,0.04806862771511078,0.06590048968791962,-0.02170442044734955,-0.0787687599658966,-0.09875090420246124,-0.0735650509595871,-0.10525831580162048,0.007103577256202698,-0.04528358578681946,-0.045784831047058105,0.008517056703567505,-0.12479637563228607,0.11955755949020386,-0.06859441101551056,-0.10998980700969696,-0.061306431889534,-0.09182007610797882,0.11403195559978485,-0.0690932422876358,-0.10614608228206635,-0.09189756214618683,-0.020782470703125,-0.06049686670303345,-0.044476449489593506,-0.009602904319763184,-0.0339711457490921,-0.020121261477470398,-0.008165448904037476,-0.08005635440349579,-0.11410194635391235,-0.09610763192176819,0.06971792876720428,0.024351567029953003,0.08541171252727509,0.1135973185300827,-0.10071712732315063,0.09825265407562256,0.08798785507678986,0.015066161751747131,0.10305087268352509,0.045011162757873535,-0.10832761228084564,-0.022240564227104187,0.1110420823097229,-0.03524462878704071,0.025367513298988342,-0.07507207989692688,0.08124703168869019,0.0777532309293747],[-0.0690094530582428,0.009179159998893738,0.03075578808784485,0.07781982421875,0.07613791525363922,0.02106037735939026,-0.12108828127384186,0.09721006453037262,0.012673139572143555,-0.10669282078742981,-0.05545149743556976,-0.09685365855693817,-0.022723093628883362,-0.04879710078239441,0.013959378004074097,-0.12045241892337799,0.013817176222801208,0.07761617004871368,0.005685791373252869,0.04042908549308777,0.10336597263813019,-0.01681356132030487,-0.05746319890022278,0.07935357093811035,-0.033226221799850464,-0.04794052243232727,-0.09143885970115662,0.025649547576904297,-0.054848432540893555,-0.11461496353149414,-0.08841101825237274,0.040291205048561096,-0.1110278069972992,-0.07550162076950073,-0.07961717247962952,-0.08758564293384552,-0.08790010213851929,-0.0727454274892807,0.03755199909210205,0.001183927059173584,0.03978945314884186,0.048962220549583435,0.07951056957244873,-0.12445072829723358,0.06130732595920563,0.05849480628967285,-0.06384430825710297,0.1146198958158493,0.014606669545173645,-0.09371292591094971,0.048424020409584045,0.0780797153711319,0.055226683616638184,0.09258264303207397,-0.12216223776340485,0.00786300003528595,0.0018648356199264526,0.07822680473327637,-0.04424925148487091,-0.016880959272384644,0.11947144567966461,0.10759863257408142,0.040100693702697754,0.022686108946800232]],"q_net.2.bias":[0.46199458837509155,0.3710201382637024,0.10877630114555359,-0.10648281872272491,0.46255117654800415,0.3131163716316223,0.0323648601770401,-0.03546741604804993,0.39062246680259705,-0.028424078598618507,0.22517988085746765,0.2902275025844574,0.017651334404945374,0.4632500112056732,0.3629128634929657,0.07990511506795883,0.2419949769973755,-0.10345765948295593,-0.02523691952228546,-0.05257249251008034,-0.025388984009623528,-0.10890369862318039,0.016425732523202896,-0.12746137380599976,0.3154652714729309,0.15421229600906372,0.07902233302593231,0.46203291416168213,0.39646732807159424,0.3082257807254791,0.4319930374622345,0.4942304790019989,-0.07357342541217804,0.48779746890068054,0.07753931730985641,0.06269532442092896,0.20414569973945618,-0.12035887688398361,0.05272150784730911,-0.08824144303798676,0.018744146451354027,0.34006884694099426,0.287034809589386,0.03745730221271515,0.09122009575366974,-0.05548694729804993,-0.05715565010905266,0.05975333973765373,0.3293877840042114,0.2998221218585968,0.28372371196746826,-0.10672341287136078,0.19906167685985565,-0.055685896426439285,-0.021268973127007484,0.0720386654138565,0.5012485980987549,0.3482135236263275,0.11298239976167679,-0.045124251395463943,-0.05001730099320412,-0.11465274542570114,-0.08124662935733795,-0.11398360133171082],"q_net.4.weight":[[0.19672447443008423,0.30968809127807617,0.37611690163612366,0.06468848884105682,0.3051334619522095,0.3280675411224365,-0.04414615035057068,-0.0042701661586761475,0.1552397459745407,-0.06585754454135895,0.23837411403656006,0.24580036103725433,0.26985791325569153,0.20852980017662048,0.2670881748199463,0.07000087201595306,0.35583072900772095,-0.08782082796096802,-0.10631376504898071,-0.011996574699878693,-0.1059490218758583,0.04414543882012367,0.07185563445091248,-0.026587922126054764,0.35450753569602966,0.31636714935302734,0.12303642183542252,0.18279515206813812,0.19581842422485352,0.3702200651168823,0.27870094776153564,0.15808264911174774,-0.11454309523105621,0.18460270762443542,-0.036089442670345306,-0.07687771320343018,0.23600900173187256,0.05392399802803993,0.18809208273887634,-0.11179249733686447,-0.07609540969133377,0.18945929408073425,0.2929084897041321,-0.01598402112722397,-0.04049893841147423,-0.1056397557258606,-0.10636284202337265,-0.07804518938064575,0.27470287680625916,0.3176276683807373,0.2649415135383606,-0.08253336697816849,0.15268175303936005,-0.06955455243587494,-0.09344027191400528,-0.01483866199851036,0.30679023265838623,0.29588690400123596,0.10190824419260025,-0.06195072829723358,-0.005333413369953632,0.11085201799869537,-0.08192555606365204,0.11872746050357819],[0.246196910738945,0.3331998884677887,0.1699499785900116,-0.023983970284461975,0.11466674506664276,0.34553197026252747,-0.1081455647945404,-0.000448569655418396,0.09603879600763321,-0.07695574313402176,0.22210128605365753,0.2736135423183441,0.15127374231815338,0.27408653497695923,0.24461933970451355,-0.017422154545783997,0.2836194336414337,0.022438347339630127,0.004717394709587097,-0.012867787852883339,-0.04179757833480835,-0.057633280754089355,0.01900862157344818,0.10367921739816666,0.1431771069765091,0.261495441198349,0.15183186531066895,0.3326415717601776,0.31910741329193115,0.22160755097866058,0.313387006521225,0.24306322634220123,0.026781633496284485,0.20067022740840912,-0.0026267198845744133,0.014107629656791687,0.27107295393943787,0.04390442371368408,0.23212842643260956,-0.09766273200511932,0.015392530709505081,0.3380505442619324,0.17341630160808563,-0.0743652954697609,0.005840549245476723,0.07169488072395325,-0.054404955357313156,0.10234194248914719,0.26564598083496094,0.2702406942844391,0.33040156960487366,0.120154969394207,0.31283167004585266,0.061104923486709595,-0.12199360132217407,0.02082867920398712,0.26178646087646484,0.24497079849243164,0.27003636956214905,-0.0997113585472107,-0.015377393923699856,0.12160380184650421,-0.06761634349822998,0.04081156849861145],[0.28278979659080505,0.24760669469833374,0.11628986895084381,0.00481085479259491,0.2924322485923767,0.1375342309474945,0.06188216805458069,-0.06329430639743805,0.2015661746263504,-0.05025949701666832,0.31653404235839844,0.34366875886917114,0.020654309540987015,0.21189378201961517,0.2342570275068283,0.08850845694541931,0.18869659304618835,-0.09882581233978271,-0.024258792400360107,0.12158471345901489,0.10144639760255814,0.05740191042423248,-0.04192730784416199,-0.012212253175675869,0.09886098653078079,0.36639562249183655,0.07886074483394623,0.33253276348114014,0.24597564339637756,0.125355064868927,0.09439539909362793,0.3628131151199341,-0.026438459753990173,0.351184219121933,-0.08838685601949692,0.08569315075874329,0.25443994998931885,-0.05325930565595627,0.287776917219162,0.0937235876917839,0.12301208078861237,0.23811188340187073,0.4041794240474701,-0.08441857993602753,-0.0883881151676178,-0.009463474154472351,0.12688122689723969,-0.05900048464536667,0.4263184368610382,0.11562623083591461,0.2882024645805359,0.12048854678869247,0.10211262851953506,0.11004306375980377,-0.02829783409833908,-0.06242546811699867,0.17464569211006165,0.2362755537033081,0.150535449385643,-0.11398328840732574,0.03622439131140709,-0.04710085690021515,-0.02504095435142517,0.025179147720336914],[0.28389227390289307,0.24847356975078583,0.22305996716022491,0.036872029304504395,0.38546276092529297,0.28946608304977417,-0.08530974388122559,0.12076470255851746,0.3428228497505188,0.000714662077371031,-0.2206149846315384,0.24593046307563782,0.44228464365005493,0.3953556716442108,0.3414815664291382,0.019554628059267998,0.24351413547992706,0.04400712251663208,-0.05443885922431946,-0.08356974273920059,0.03102775849401951,-0.057410404086112976,0.007905706763267517,-0.03305714577436447,0.26600977778434753,0.03451932221651077,0.7042559385299683,0.3451007604598999,0.24937260150909424,0.15633288025856018,0.2823977768421173,0.425601065158844,0.10139566659927368,0.3967757225036621,0.03359736129641533,0.05717867612838745,0.07641684263944626,-0.01720944419503212,0.4863681197166443,0.0725022554397583,-0.09596016258001328,0.2506870925426483,0.1917174905538559,-0.006735151167958975,-0.010641662403941154,-0.11433620750904083,-0.08880706131458282,0.0828213021159172,0.08604583889245987,0.5978154540061951,0.19813834130764008,-0.022329838946461678,0.1094987764954567,0.0495447963476181,-0.017278743907809258,0.11805424094200134,0.3496991991996765,0.1541670858860016,-0.0549662820994854,0.08572907745838165,0.08822916448116302,-0.07722452282905579,-0.10123448073863983,-0.025650471448898315],[0.31496843695640564,0.26510483026504517,0.3204103708267212,-0.017998427152633667,0.22692915797233582,0.17491424083709717,-0.04287347197532654,0.03649581968784332,0.1934160441160202,-0.015213826671242714,0.2970183491706848,0.3756290078163147,0.5471230745315552,0.179958775639534,0.07386833429336548,0.0661071240901947,0.34495481848716736,0.12069645524024963,0.1235334724187851,-0.08909057825803757,0.0124635836109519,-0.03681512176990509,0.028710022568702698,0.11793588101863861,0.18336524069309235,0.23782819509506226,0.3426513969898224,0.17459221184253693,0.2667108178138733,0.3346305787563324,-0.012402585707604885,0.12195061892271042,0.1013399213552475,0.171600803732872,0.03143990412354469,0.054194942116737366,0.48028409481048584,-0.038162749260663986,0.3623099625110626,-0.11975401639938354,0.06664429605007172,0.23036262392997742,0.3323642611503601,0.09188933670520782,-0.010747890919446945,-0.0032440125942230225,-0.10299162566661835,-0.056758757680654526,0.292805939912796,-0.763507068157196,0.47524797916412354,-0.1004815474152565,0.1250787377357483,0.07704216241836548,0.11987670511007309,-0.16558746993541718,0.3606499433517456,0.4278578460216522,0.7035086750984192,-0.07915686070919037,-0.08806782960891724,0.027331821620464325,-0.12280857563018799,0.005685150623321533],[0.18113332986831665,0.35647085309028625,0.10544280707836151,-0.11217501759529114,0.31310200691223145,0.28535333275794983,0.03892314434051514,-0.010692313313484192,0.21336805820465088,-0.08425085246562958,0.3295857310295105,0.2704298496246338,0.32940608263015747,0.19510838389396667,0.2313607931137085,0.030495380982756615,0.3716064393520355,-0.019637972116470337,0.03324243426322937,-0.08976620435714722,-0.08254199475049973,-0.009093254804611206,0.0020851746667176485,0.022872617468237877,0.3313862979412079,0.2731827199459076,0.04593795910477638,0.3131096363067627,0.3278762102127075,0.17803257703781128,0.18948356807231903,0.3199530839920044,0.11638876795768738,0.22933527827262878,-0.027838408946990967,-0.08933082222938538,0.26906806230545044,0.0953989028930664,0.03925714269280434,-0.03454872965812683,-0.10503392666578293,0.23739506304264069,0.2614549398422241,-0.025351596996188164,0.06442409008741379,0.07048363983631134,0.07828075438737869,-0.004715398885309696,0.18376898765563965,0.23231223225593567,0.13588517904281616,0.06641944497823715,0.3266562223434448,0.03157752752304077,-0.12206783890724182,-0.1240260899066925,0.186021089553833,0.16197074949741364,0.4108268618583679,-0.04886045679450035,-0.07146500796079636,0.026348307728767395,-0.047440677881240845,-0.11974313855171204],[0.13524603843688965,-0.10442297160625458,0.11587052047252655,0.0032219737768173218,0.26359912753105164,0.25930216908454895,0.07410009205341339,0.020413339138031006,0.32288241386413574,-0.17395663261413574,0.16522075235843658,0.09649012982845306,0.3659129738807678,0.41001009941101074,0.3501829504966736,0.07502644509077072,0.11564191430807114,-0.015999674797058105,0.08843892812728882,0.06988952308893204,-0.07717245072126389,0.11073996126651764,0.08813352882862091,0.02953377179801464,0.2511136829853058,0.4952971041202545,0.3460726737976074,0.16206255555152893,0.06173226982355118,0.1452850103378296,0.11456657946109772,0.4261716604232788,-0.09061074256896973,0.28036993741989136,-0.1151093915104866,0.044755131006240845,0.3984786868095398,0.06864874064922333,0.26279154419898987,0.062311168760061264,0.06917322427034378,0.22582200169563293,0.22288209199905396,0.07384295761585236,0.025333872064948082,0.12336018681526184,0.08887054026126862,0.0716889426112175,0.01734410785138607,0.5290817022323608,0.36191457509994507,-0.015866594389081,0.37135636806488037,0.09640853106975555,0.0526488795876503,-0.009146216325461864,0.3609490990638733,0.3452683091163635,0.40736109018325806,-0.0343150794506073,0.0753965824842453,-0.02967250347137451,0.10260854661464691,0.09063784778118134],[0.35551756620407104,0.2872594892978668,0.08791255950927734,-0.03745599091053009,0.3064854145050049,0.2632807791233063,-0.01148030161857605,0.05035699903964996,0.31192800402641296,0.030563203617930412,0.29730093479156494,0.14574670791625977,0.08323019742965698,0.13854095339775085,0.11452942341566086,0.08879683166742325,0.16898037493228912,0.04428732395172119,-0.09729506075382233,0.1102590560913086,-0.03857935592532158,0.08225108683109283,-0.04711219668388367,-0.08484552055597305,0.3408970534801483,0.3331771194934845,-0.04237835854291916,0.23583641648292542,0.36216628551483154,0.28796282410621643,0.14481355249881744,0.3547004163265228,-0.12095127999782562,0.2326037734746933,0.04233310744166374,0.12277254462242126,0.21095815300941467,-0.13259996473789215,0.1309373527765274,-0.13322888314723969,-0.02317758835852146,0.22802665829658508,0.2517628073692322,0.07361575216054916,-0.05136503279209137,-0.05271264910697937,0.016488272696733475,-0.0430816151201725,0.2426183670759201,-0.15470674633979797,0.35150107741355896,-0.07987772673368454,0.24248777329921722,0.02610313892364502,-0.060769420117139816,-0.043321117758750916,0.24773654341697693,0.2020820528268814,0.16820810735225677,-0.01961904764175415,0.012478792108595371,-0.032689571380615234,-0.08431288599967957,-0.07713170349597931],[0.25017592310905457,0.07011336088180542,0.18414011597633362,0.07992643117904663,0.10253126174211502,0.29675281047821045,-0.057711854577064514,0.08411923050880432,0.2965405285358429,-0.04261225089430809,0.05981408432126045,0.3392844498157501,0.09999890625476837,0.10884688049554825,0.21311162412166595,-0.07221779227256775,0.3402481973171234,0.007240012288093567,-0.0028800219297409058,-0.13603779673576355,-0.1229645386338234,0.03735007345676422,0.1208483874797821,-0.07310093939304352,0.2218143492937088,0.3287559449672699,0.0198234673589468,0.33605146408081055,0.3110670745372772,0.3063547611236572,0.2513517141342163,0.11889946460723877,-0.10462568700313568,0.1850077211856842,-0.003706259885802865,0.09479047358036041,0.16901400685310364,-0.04449385404586792,0.06238649785518646,-0.00040163256926462054,-0.055791471153497696,0.308719277381897,0.32939115166664124,-0.05591389909386635,-0.10193967074155807,-0.07163617014884949,0.05222262442111969,-0.07053732126951218,0.16028964519500732,-0.18767210841178894,0.3700300455093384,-0.0808248445391655,0.3237813115119934,-0.010459810495376587,0.026528209447860718,-0.1301371306180954,0.2713177800178528,0.2548576593399048,0.29421547055244446,-0.00319729745388031,0.003648159559816122,0.06667861342430115,0.04156181216239929,0.04392656683921814],[0.28669703006744385,0.29049766063690186,0.018189318478107452,0.05703456699848175,0.20217816531658173,0.27529656887054443,-0.09119850397109985,0.03979365527629852,0.11769448220729828,-0.04575733467936516,0.27736908197402954,0.19391518831253052,0.1216852143406868,0.2520895302295685,0.16464769840240479,0.015249878168106079,0.28685128688812256,0.052616387605667114,0.026229754090309143,-0.11924726516008377,-0.14452406764030457,0.07984623312950134,-0.07250307500362396,-0.014904007315635681,0.21082988381385803,0.3000205159187317,0.13614632189273834,0.28252342343330383,0.34172186255455017,0.31327196955680847,0.30538466572761536,0.30924680829048157,-0.09796313941478729,0.3157751262187958,-0.10491547733545303,0.08268634974956512,0.24767111241817474,0.033405810594558716,0.07175299525260925,-0.10323842614889145,-0.054633427411317825,0.12969079613685608,0.24066169559955597,-0.09253624826669693,0.08016426861286163,-0.10284847021102905,0.018004585057497025,0.11326886713504791,0.3020595610141754,0.04067244753241539,0.3294796049594879,0.0716044083237648,0.18903794884681702,0.020629897713661194,0.0417453795671463,-0.1279902309179306,0.10228385031223297,0.3673340976238251,0.3034275770187378,-0.050482556223869324,0.08932993561029434,-0.04426732659339905,-0.00713348388671875,-0.10566024482250214]],"q_net.4.bias":[0.07016927748918533,0.23292076587677002,0.3072052299976349,0.4162748456001282,0.20973335206508636,0.31061017513275146,-0.03867623209953308,0.26971253752708435,0.25974616408348083,0.21863465011119843]};
+
+// ===== ACTION NAMES (same order as training) =====
+const ACTION_NAMES = ["purr","meow","hiss","nap","play_alone","explore","eat","ignore","rub","stare"];
+
+// ===== DQN Forward Pass =====
+function dqnPredict(obs) {
+  // obs = array of 12 floats
+  // Layer 1: Linear(12->64) + ReLU
+  const w1 = DQN_WEIGHTS["q_net.0.weight"]; // 64x12
+  const b1 = DQN_WEIGHTS["q_net.0.bias"];    // 64
+  const h1 = new Float32Array(64);
+  for (let i = 0; i < 64; i++) {
+    let sum = b1[i];
+    for (let j = 0; j < 12; j++) sum += w1[i][j] * obs[j];
+    h1[i] = sum > 0 ? sum : 0; // ReLU
+  }
+  // Layer 2: Linear(64->64) + ReLU
+  const w2 = DQN_WEIGHTS["q_net.2.weight"]; // 64x64
+  const b2 = DQN_WEIGHTS["q_net.2.bias"];    // 64
+  const h2 = new Float32Array(64);
+  for (let i = 0; i < 64; i++) {
+    let sum = b2[i];
+    for (let j = 0; j < 64; j++) sum += w2[i][j] * h1[j];
+    h2[i] = sum > 0 ? sum : 0; // ReLU
+  }
+  // Layer 3: Linear(64->10) — no activation
+  const w3 = DQN_WEIGHTS["q_net.4.weight"]; // 10x64
+  const b3 = DQN_WEIGHTS["q_net.4.bias"];    // 10
+  const out = new Float32Array(10);
+  for (let i = 0; i < 10; i++) {
+    let sum = b3[i];
+    for (let j = 0; j < 64; j++) sum += w3[i][j] * h2[j];
+    out[i] = sum;
+  }
+  // Argmax with small epsilon-greedy for variety
+  if (Math.random() < 0.1) {
+    return Math.floor(Math.random() * 10);
+  }
+  let bestIdx = 0;
+  for (let i = 1; i < 10; i++) {
+    if (out[i] > out[bestIdx]) bestIdx = i;
+  }
+  return bestIdx;
+}
+
+// ===== TIME PERIODS =====
+const TIME_PERIODS = {
+  dawn: [5, 7], morning: [7, 12], afternoon: [12, 16],
+  evening: [16, 21], night: [21, 24], late_night: [0, 5]
+};
+
+function getTimePeriod(hour) {
+  if (hour === undefined) hour = new Date().getHours();
+  for (const [period, [start, end]] of Object.entries(TIME_PERIODS)) {
+    if (hour >= start && hour < end) return period;
+  }
+  return "late_night";
+}
+
+// ===== CAT STATE CLASS =====
+class CatState {
+  constructor(opts = {}) {
+    this.hunger = opts.hunger !== undefined ? opts.hunger : 0.3;
+    this.energy = opts.energy !== undefined ? opts.energy : 0.8;
+    this.happiness = opts.happiness !== undefined ? opts.happiness : 0.5;
+    this.curiosity = opts.curiosity !== undefined ? opts.curiosity : 0.5;
+    this.bondLevel = opts.bondLevel !== undefined ? opts.bondLevel : 0.1;
+    this.stress = opts.stress !== undefined ? opts.stress : 0.1;
+    this.trust = opts.trust !== undefined ? opts.trust : 0.2;
+    this.comfort = opts.comfort !== undefined ? opts.comfort : 0.5;
+
+    // Personality (fixed)
+    this.boldness = opts.boldness !== undefined ? opts.boldness : 0.5;
+    this.affection = opts.affection !== undefined ? opts.affection : 0.5;
+    this.appetite = opts.appetite !== undefined ? opts.appetite : 0.5;
+
+    this._lastUpdate = Date.now() / 1000;
+    this._recentInteractions = 0;
+    this._interactionReset = Date.now() / 1000;
+  }
+
+  // Rates per second
+  static HUNGER_RATE = 0.002;
+  static ENERGY_DECAY = 0.001;
+  static CURIOSITY_RATE = 0.0015;
+  static HAPPINESS_DECAY = 0.0005;
+  static BOND_DECAY = 0.0001;
+  static STRESS_DECAY = 0.0008;
+  static TRUST_DECAY = 0.00005;
+  static COMFORT_DECAY = 0.0003;
+
+  clamp(v) { return Math.max(0, Math.min(1, v)); }
+
+  get timePeriod() { return getTimePeriod(); }
+
+  _timeMultipliers() {
+    const period = this.timePeriod;
+    const m = { hunger: 1, energy: 1, curiosity: 1, happiness: 1 };
+    if (period === "morning")     { m.hunger=1.5; m.energy=0.5; m.curiosity=1.8; m.happiness=0.8; }
+    else if (period === "afternoon") { m.hunger=1.0; m.energy=2.0; m.curiosity=0.5; m.happiness=0.8; }
+    else if (period === "evening")   { m.hunger=1.3; m.energy=0.7; m.curiosity=1.5; m.happiness=0.3; }
+    else if (period === "night")     { m.hunger=0.8; m.energy=1.8; m.curiosity=0.3; m.happiness=1.0; }
+    else if (period === "late_night"){ m.hunger=0.5; m.energy=-1.5; m.curiosity=0.2; m.happiness=0.5; }
+    else if (period === "dawn")      { m.hunger=1.2; m.energy=-0.5; m.curiosity=1.0; m.happiness=0.7; }
+    return m;
+  }
+
+  tick() {
+    const now = Date.now() / 1000;
+    const elapsed = now - this._lastUpdate;
+    this._lastUpdate = now;
+
+    if (now - this._interactionReset > 60) {
+      this._recentInteractions = 0;
+      this._interactionReset = now;
+    }
+
+    const m = this._timeMultipliers();
+
+    this.hunger = this.clamp(this.hunger + CatState.HUNGER_RATE * elapsed * m.hunger);
+
+    if (m.energy < 0) {
+      this.energy = this.clamp(this.energy + CatState.ENERGY_DECAY * elapsed * Math.abs(m.energy));
+    } else {
+      this.energy = this.clamp(this.energy - CatState.ENERGY_DECAY * elapsed * m.energy);
+    }
+
+    this.curiosity = this.clamp(this.curiosity + CatState.CURIOSITY_RATE * elapsed * m.curiosity);
+    this.happiness = this.clamp(this.happiness - CatState.HAPPINESS_DECAY * elapsed * m.happiness);
+    this.bondLevel = this.clamp(this.bondLevel - CatState.BOND_DECAY * elapsed);
+
+    this.stress = this.clamp(this.stress - CatState.STRESS_DECAY * elapsed);
+    this.trust = this.clamp(this.trust - CatState.TRUST_DECAY * elapsed);
+
+    const comfortTarget = 0.5 - this.stress * 0.3;
+    this.comfort = this.clamp(this.comfort + (comfortTarget - this.comfort) * 0.001 * elapsed);
+
+    if (this.hunger > 0.7) this.happiness = this.clamp(this.happiness - 0.001 * elapsed);
+    if (this.energy < 0.2) this.happiness = this.clamp(this.happiness - 0.001 * elapsed);
+    if (this.stress > 0.6) {
+      this.happiness = this.clamp(this.happiness - 0.0008 * elapsed);
+      this.energy = this.clamp(this.energy - 0.0005 * elapsed);
+    }
+  }
+
+  applyAction(action) {
+    this._recentInteractions++;
+
+    const effects = {
+      feed:    { hunger: -0.4, happiness: 0.1, bondLevel: 0.05, trust: 0.03, stress: -0.05 },
+      pet:     { happiness: 0.2, bondLevel: 0.08, energy: -0.02, comfort: 0.15, stress: -0.1 },
+      play:    { happiness: 0.3, energy: -0.15, curiosity: -0.2, bondLevel: 0.1, stress: -0.05 },
+      talk:    { happiness: 0.05, bondLevel: 0.03, curiosity: 0.05, trust: 0.02, comfort: 0.05 },
+      sleep:   { energy: 0.5, hunger: 0.1, stress: -0.2, comfort: 0.2 },
+      explore: { curiosity: -0.3, energy: -0.1, happiness: 0.1, comfort: -0.1 },
+    };
+
+    if (!effects[action]) return;
+
+    if (this._recentInteractions > 4) {
+      const overpetStress = (this._recentInteractions - 4) * 0.08 * (1.0 - this.affection);
+      this.stress = this.clamp(this.stress + overpetStress);
+    }
+
+    for (const [attr, delta_orig] of Object.entries(effects[action])) {
+      let delta = delta_orig;
+      const current = this[attr];
+      const noise = (Math.random() - 0.5) * 0.06; // uniform(-0.03, 0.03)
+
+      if (action === "feed" && attr === "hunger") {
+        delta *= (0.7 + this.appetite * 0.6);
+      } else if (action === "pet" && (attr === "happiness" || attr === "comfort")) {
+        delta *= (0.5 + this.affection);
+      } else if (action === "pet" && attr === "stress") {
+        if (this.trust < 0.3) delta = 0.1;
+      } else if (action === "play" && attr === "happiness") {
+        delta *= (0.6 + this.boldness * 0.8);
+      }
+
+      this[attr] = this.clamp(current + delta + noise);
+    }
+
+    if (["feed","pet","play","talk"].includes(action) && this.stress < 0.4) {
+      this.trust = this.clamp(this.trust + 0.01);
+    }
+  }
+
+  get mood() {
+    if (this.stress > 0.7) return "scared";
+    if (this.stress > 0.5 && this.trust < 0.3) return "annoyed";
+    if (this.energy < 0.2) return "sleepy";
+    if (this.hunger > 0.7) return "hungry";
+    if (this.happiness < 0.2) return "annoyed";
+    if (this.comfort > 0.7 && this.stress < 0.2) return "relaxed";
+    if (this.curiosity > 0.7 && this.boldness > 0.4) return "curious";
+    if (this.happiness > 0.7 && this.energy > 0.5) return "playful";
+    if (this.happiness > 0.5) return "happy";
+    return "content";
+  }
+
+  get stateVector() {
+    return [this.hunger, this.energy, this.happiness, this.curiosity, this.bondLevel,
+            this.stress, this.trust, this.comfort, this.boldness, this.affection, this.appetite];
+  }
+}
+
+// ===== ACTION TEXT (ported from brain.py) =====
+const ACTION_TEXT = {
+  purr: [
+    "แมวครางเบา ๆ อย่างมีความสุข... prrrr~",
+    "แมวหลับตาแล้วครางเสียงดัง นี่มันพอใจมาก",
+    "เสียงครางเบา ๆ ดังขึ้นจากลำคอ... แมวดูผ่อนคลาย",
+  ],
+  meow: [
+    "เมี้ยว~! แมวร้องเรียกความสนใจ",
+    "แมวเดินมาเสียดสีขาพร้อมร้อง เมี้ยว!",
+    "เมี้ยววว... แมวนั่งจ้องด้วยตาโต",
+  ],
+  hiss: [
+    "ฟืดดด! แมวขู่แล้วเดินหนีไป",
+    "แมวหูแนบหัว ดวงตาเหลือบมอง... อย่ามายุ่ง",
+    "แมวสะบัดหางแรง ๆ แล้วเดินจากไป",
+  ],
+  nap: [
+    "แมวม้วนตัวเป็นก้อนกลม ๆ แล้วหลับไป... zzz",
+    "แมวหาวยาว แล้วหลับตาลง... นอนเลย",
+    "แมวเดินไปนอนในที่อุ่น ๆ แล้วนอนหลับสนิท",
+  ],
+  play_alone: [
+    "แมวกระโดดไล่จับอะไรบางอย่างที่มองไม่เห็น!",
+    "แมวตบลูกบอลไปมาอย่างสนุกสนาน",
+    "แมวกระโดดตัวลอย! เล่นกับเงาตัวเอง",
+  ],
+  explore: [
+    "แมวเดินสำรวจรอบ ๆ อย่างระมัดระวัง...",
+    "แมวดมนู่นดมนี่ หูตั้งชัน สนใจทุกอย่าง",
+    "แมวกระโดดขึ้นที่สูงเพื่อสำรวจ มองลงมาอย่างภาคภูมิ",
+  ],
+  eat: [
+    "แมวเดินไปที่ชามอาหารแล้วกินอย่างเอร็ดอร่อย",
+    "มุบมิบ มุบมิบ... แมวกินข้าวอย่างตั้งใจ",
+    "แมวเลียปากหลังกินอิ่ม แล้วนั่งเลียขน",
+  ],
+  ignore: [
+    "... แมวเมินไปเลย ไม่สนใจแม้แต่นิดเดียว",
+    "แมวหันหลังให้ แกล้งทำเป็นไม่เห็น",
+    "แมวนั่งเลียขนอย่างไม่แยแส ราวกับไม่มีใครอยู่",
+  ],
+  rub: [
+    "แมวเดินมาเสียดสีที่ขา แสดงความรัก~",
+    "แมวเอาหัวมาดุนมือ... อยากให้ลูบ",
+    "แมวนอนหงายท้องให้! ...แต่อาจเป็นกับดักนะ",
+  ],
+  stare: [
+    "แมวนั่งจ้องนิ่ง ๆ... ดวงตากลมโตไม่กะพริบ",
+    "แมวมองจากมุมห้อง ใครจะรู้ว่าคิดอะไร...",
+    "แมวเอียงหัว จ้องมองอย่างสงสัย...",
+  ],
+};
+
+const CAT_REACTION_TEXT = {
+  purr: [
+    "{name} ก็ครางตาม... prrrr~",
+    "{name} หลับตาแล้วครางเบา ๆ ด้วย",
+  ],
+  rub: [
+    "{name} เดินมาเสียดสีอีกตัว",
+    "{name} เอาหัวมาดุนเพื่อน",
+  ],
+  play_alone: [
+    "{name} กระโดดเข้าร่วมเล่นด้วย!",
+    "{name} ไล่ตบอีกตัวเล่น!",
+  ],
+  meow: [
+    "{name} ร้องตอบ เมี้ยว~!",
+    "{name} ร้องตาม เหมือนคุยกัน",
+  ],
+  hiss: [
+    "{name} ขู่กลับ ฟืดดด!",
+    "{name} ขนพอง ไม่พอใจ!",
+  ],
+  nap: [
+    "{name} ม้วนตัวนอนตาม... zzz",
+    "{name} นอนต่อ ไม่สนใจ",
+  ],
+  stare: [
+    "{name} จ้องมองอีกตัวนิ่ง ๆ...",
+    "{name} เอียงหัวดู",
+  ],
+  ignore: [
+    "{name} เมินไปเลย ไม่แยแส",
+    "{name} เดินจากไป",
+  ],
+  explore: [
+    "{name} เดินไปดมดู อยากรู้อยากเห็น",
+    "{name} แอบไปสำรวจต่อ",
+  ],
+  eat: [
+    "{name} แย่งไปกินด้วย!",
+    "{name} วิ่งมาที่ชามอาหาร!",
+  ],
+};
+
+// ===== BRAIN =====
+function randChoice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function encodeUserAction(action) {
+  const m = { feed: 0.2, pet: 0.4, play: 0.6, talk: 0.8 };
+  return m[action] || 0.0;
+}
+
+function decideResponse(state, userAction) {
+  const obs = [...state.stateVector, encodeUserAction(userAction)];
+  const actionIdx = dqnPredict(obs);
+  return ACTION_NAMES[actionIdx];
+}
+
+function decideCatReaction(reactorState, actorAction) {
+  if (reactorState.mood === "sleepy") {
+    if (actorAction === "meow" || actorAction === "play_alone") return randChoice(["stare","hiss"]);
+    return "nap";
+  }
+  if (reactorState.mood === "annoyed") return randChoice(["hiss","ignore","stare"]);
+
+  if (actorAction === "play_alone") {
+    if (["playful","curious","happy"].includes(reactorState.mood) && reactorState.energy > 0.3)
+      return randChoice(["play_alone","play_alone","explore"]);
+    return randChoice(["stare","ignore"]);
+  }
+  if (actorAction === "purr") {
+    if (reactorState.happiness > 0.4) return randChoice(["purr","rub","nap"]);
+    return "stare";
+  }
+  if (actorAction === "meow") {
+    if (["happy","curious"].includes(reactorState.mood)) return randChoice(["meow","stare"]);
+    return randChoice(["stare","ignore"]);
+  }
+  if (actorAction === "hiss") return randChoice(["hiss","ignore","stare"]);
+  if (actorAction === "eat") {
+    if (reactorState.hunger > 0.5) return randChoice(["meow","stare"]);
+    return "stare";
+  }
+  if (actorAction === "rub") {
+    if (reactorState.happiness > 0.3) return randChoice(["rub","purr","stare"]);
+    return "stare";
+  }
+  return randChoice(["stare","ignore","explore"]);
+}
+
+function getActionText(action) {
+  const texts = ACTION_TEXT[action] || ["แมวทำ " + action + "..."];
+  return randChoice(texts);
+}
+
+function getReactionText(action, catName) {
+  const texts = CAT_REACTION_TEXT[action] || [catName + " จ้องมอง..."];
+  const text = randChoice(texts);
+  return text.replace("{name}", catName);
+}
+
+function wasPositiveInteraction(state, catAction) {
+  const positive = new Set(["purr","rub","play_alone","eat","meow"]);
+  const negative = new Set(["hiss","ignore"]);
+  if (positive.has(catAction)) return true;
+  if (negative.has(catAction)) return false;
+  return state.happiness > 0.4;
+}
+
+// ===== POSITION UPDATES (ported from web.py) =====
+const FOOD_POS = [12, 68];
+const BED_POS = [85, 25];
+const OWNER_POS = [50, 85];
+
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function updatePosition(catData, action, otherPos) {
+  let [x, y] = catData.pos;
+  const [ox, oy] = otherPos;
+
+  if (action === "eat") {
+    x = FOOD_POS[0] + randInt(-3, 3);
+    y = FOOD_POS[1] + randInt(-3, 3);
+  } else if (action === "nap") {
+    x = BED_POS[0] + randInt(-5, 5);
+    y = BED_POS[1] + randInt(-5, 5);
+  } else if (action === "rub" || action === "meow") {
+    x = OWNER_POS[0] + randInt(-8, 8);
+    y = OWNER_POS[1] + randInt(-5, 3);
+  } else if (action === "hiss") {
+    const dx = x >= ox ? 1 : -1;
+    x += dx * randInt(10, 20);
+  } else if (action === "explore") {
+    x = randInt(10, 90);
+    y = randInt(15, 75);
+  } else if (action === "play_alone") {
+    const midX = Math.floor((x + ox) / 2);
+    const midY = Math.floor((y + oy) / 2);
+    x = midX + randInt(-10, 10);
+    y = midY + randInt(-10, 10);
+  } else if (action === "purr") {
+    x += randInt(-3, 3);
+    y += randInt(-3, 3);
+  } else if (action === "ignore") {
+    const dx = x >= ox ? 1 : -1;
+    x += dx * randInt(5, 15);
+  }
+
+  catData.pos = [Math.max(5, Math.min(92, x)), Math.max(12, Math.min(85, y))];
+}
+
+// ===== GAME STATE =====
+const CAT_NAMES = ["\u0e2a\u0e49\u0e21", "\u0e40\u0e17\u0e32"]; // ส้ม, เทา
+
+const cats = [
+  {
+    name: CAT_NAMES[0],
+    state: new CatState({ hunger: 0.3, energy: 0.8, boldness: 0.8, affection: 0.9, appetite: 0.7 }),
+    pos: [30, 55],
+    totalInteractions: 0,
+    positiveInteractions: 0,
+  },
+  {
+    name: CAT_NAMES[1],
+    state: new CatState({ hunger: 0.3, energy: 0.6, happiness: 0.6, curiosity: 0.7, boldness: 0.3, affection: 0.4, appetite: 0.3 }),
+    pos: [70, 45],
+    totalInteractions: 0,
+    positiveInteractions: 0,
+  },
+];
+
+// ===== UI STATE =====
+let selectedCat = 0;
+let catMoods = ['content', 'content'];
+let speechTimers = [null, null];
+let currentLang = localStorage.getItem('catLang') || 'th';
+let busy = false;
+
+// ===== i18n =====
+const I18N = {
+  th: {
+    subtitle: 'สัตว์เลี้ยงเสมือนที่มีสมอง — ขับเคลื่อนด้วย ML',
+    catNames: ['ส้ม', 'เทา'],
+    greetings: ['สวัสดี~ ฉันชื่อส้ม!', 'เมี้ยว~ ฉันชื่อเทา!'],
+    stats: { hunger: 'หิว', energy: 'พลัง', happiness: 'สุข', curiosity: 'สนใจ', bond: 'ผูกพัน', stress: 'เครียด', trust: 'ไว้ใจ', comfort: 'สบาย' },
+    buttons: { feed: '🍖 ให้อาหาร', pet: '🤚 ลูบหัว', play: '🧶 เล่นด้วย', talk: '💬 พูดคุย', wait: '⏳ รอดู' },
+    mood: { happy: 'มีความสุข', playful: 'ขี้เล่น', content: 'พอใจ', sleepy: 'ง่วงนอน', hungry: 'หิวข้าว', annoyed: 'หงุดหงิด', curious: 'อยากรู้อยากเห็น', scared: 'กลัว', relaxed: 'ผ่อนคลาย' },
+    time: { dawn: 'รุ่งเช้า', morning: 'เช้า', afternoon: 'บ่าย', evening: 'เย็น', night: 'กลางคืน', late_night: 'ดึก' },
+    timeFmt: (emoji, period, hour) => `${emoji} ช่วง${period} (${hour}:00 น.)`,
+    relFmt: (total, pct) => `${total} ครั้ง • สุข ${pct}%`,
+    hintDefault: '💡 กดเลือกแมวในห้อง แล้วใช้ปุ่มด้านล่าง',
+    hintSleepy: '😴 แมวกำลังหลับ... รอดูอย่างเดียวนะ',
+    hintScared: '🙀 แมวกลัวมาก... อย่ายุ่ง รอให้สงบก่อน',
+    errorMsg: '⚠️ เกิดข้อผิดพลาด',
+    personality: {
+      0: [{e:'🦁',t:'กล้า'},{e:'🥰',t:'ขี้อ้อน'},{e:'🍗',t:'ชอบกิน'}],
+      1: [{e:'🐭',t:'ขี้กลัว'},{e:'😎',t:'เฉย'},{e:'🥗',t:'เลือกกิน'}],
+    },
+  },
+  en: {
+    subtitle: 'Virtual Pet with a Mind — powered by ML',
+    catNames: ['Som', 'Tao'],
+    greetings: ['Hello~ I\'m Som!', 'Meow~ I\'m Tao!'],
+    stats: { hunger: 'Hunger', energy: 'Energy', happiness: 'Happy', curiosity: 'Curious', bond: 'Bond', stress: 'Stress', trust: 'Trust', comfort: 'Comfort' },
+    buttons: { feed: '🍖 Feed', pet: '🤚 Pet', play: '🧶 Play', talk: '💬 Talk', wait: '⏳ Wait' },
+    mood: { happy: 'Happy', playful: 'Playful', content: 'Content', sleepy: 'Sleepy', hungry: 'Hungry', annoyed: 'Annoyed', curious: 'Curious', scared: 'Scared', relaxed: 'Relaxed' },
+    time: { dawn: 'Dawn', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', night: 'Night', late_night: 'Late Night' },
+    timeFmt: (emoji, period, hour) => `${emoji} ${period} (${hour}:00)`,
+    relFmt: (total, pct) => `${total} times • ${pct}% positive`,
+    hintDefault: '💡 Select a cat in the room, then use buttons below',
+    hintSleepy: '😴 Cat is sleeping... just wait',
+    hintScared: '🙀 Cat is terrified... leave it alone',
+    errorMsg: '⚠️ Something went wrong',
+    personality: {
+      0: [{e:'🦁',t:'Bold'},{e:'🥰',t:'Cuddly'},{e:'🍗',t:'Foodie'}],
+      1: [{e:'🐭',t:'Shy'},{e:'😎',t:'Aloof'},{e:'🥗',t:'Picky'}],
+    },
+  },
+  ko: {
+    subtitle: '두뇌를 가진 가상 반려묘 — ML 기반',
+    catNames: ['솜', '타오'],
+    greetings: ['안녕~ 나는 솜이야!', '냐옹~ 나는 타오야!'],
+    stats: { hunger: '배고픔', energy: '에너지', happiness: '행복', curiosity: '호기심', bond: '유대감', stress: '스트레스', trust: '신뢰', comfort: '편안함' },
+    buttons: { feed: '🍖 밥주기', pet: '🤚 쓰다듬기', play: '🧶 놀아주기', talk: '💬 대화하기', wait: '⏳ 기다리기' },
+    mood: { happy: '행복해', playful: '장난꾸러기', content: '만족', sleepy: '졸려', hungry: '배고파', annoyed: '짜증나', curious: '궁금해', scared: '무서워', relaxed: '편안해' },
+    time: { dawn: '새벽', morning: '아침', afternoon: '오후', evening: '저녁', night: '밤', late_night: '심야' },
+    timeFmt: (emoji, period, hour) => `${emoji} ${period} (${hour}시)`,
+    relFmt: (total, pct) => `${total}회 • 긍정 ${pct}%`,
+    hintDefault: '💡 방에서 고양이를 선택한 후 아래 버튼을 사용하세요',
+    hintSleepy: '😴 고양이가 자고 있어요... 기다려주세요',
+    hintScared: '🙀 고양이가 무서워해요... 건드리지 마세요',
+    errorMsg: '⚠️ 오류가 발생했습니다',
+    personality: {
+      0: [{e:'🦁',t:'용감'},{e:'🥰',t:'애교쟁이'},{e:'🍗',t:'먹보'}],
+      1: [{e:'🐭',t:'겁쟁이'},{e:'😎',t:'도도'},{e:'🥗',t:'까다로운'}],
+    },
+  },
+};
+
+const MOOD_EMOJI = {
+  happy: '😸', playful: '😺', content: '😌',
+  sleepy: '😴', hungry: '🍖', annoyed: '😾', curious: '🧐',
+  scared: '🙀', relaxed: '😽'
+};
+const TIME_EMOJI = {
+  dawn: '🌅', morning: '☀️', afternoon: '🌤️',
+  evening: '🌆', night: '🌙', late_night: '🌑'
+};
+
+function lang() { return I18N[currentLang]; }
+
+function setLang(l) {
+  currentLang = l;
+  localStorage.setItem('catLang', l);
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${l}')"]`).classList.add('active');
+  applyLang();
+}
+
+function applyLang() {
+  const L = lang();
+  document.getElementById('subtitle').textContent = L.subtitle;
+
+  for (let i = 0; i < 2; i++) {
+    document.getElementById('cat-name-' + i).textContent = L.catNames[i];
+    document.querySelector('#room-cat-' + i + ' .cat-tag').textContent = L.catNames[i];
+
+    for (const key of Object.keys(L.stats)) {
+      document.getElementById('lbl-' + key + '-' + i).textContent = L.stats[key];
+    }
+
+    const pEl = document.getElementById('personality-' + i);
+    pEl.innerHTML = L.personality[i].map(p => `<span class="personality-tag">${p.e} ${p.t}</span>`).join('');
+
+    const emoji = MOOD_EMOJI[catMoods[i]] || '😺';
+    const moodText = L.mood[catMoods[i]] || catMoods[i];
+    document.getElementById('mood-' + i).textContent = emoji + ' ' + moodText;
+  }
+
+  for (let i = 0; i < 2; i++) {
+    const sp = document.getElementById('speech-' + i);
+    if (!sp.textContent || sp.classList.contains('visible')) {
+      sp.textContent = L.greetings[i];
+      sp.classList.add('visible');
+    }
+  }
+
+  document.getElementById('btn-feed').textContent = L.buttons.feed;
+  document.getElementById('btn-pet').textContent = L.buttons.pet;
+  document.getElementById('btn-play').textContent = L.buttons.play;
+  document.getElementById('btn-talk').textContent = L.buttons.talk;
+  document.getElementById('btn-wait').textContent = L.buttons.wait;
+
+  updateButtons();
+}
+
+function selectCat(id) {
+  selectedCat = id;
+  document.querySelectorAll('.room-cat').forEach(c => c.classList.remove('selected'));
+  document.getElementById('room-cat-' + id).classList.add('selected');
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('stat-card-' + id).classList.add('selected');
+  updateButtons();
+}
+
+function updateButtons() {
+  const L = lang();
+  const mood = catMoods[selectedCat];
+  ['btn-feed', 'btn-pet', 'btn-play', 'btn-talk'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (mood === 'sleepy' || mood === 'scared') btn.classList.add('disabled');
+    else btn.classList.remove('disabled');
+  });
+  const hint = document.getElementById('hint');
+  if (mood === 'sleepy') hint.textContent = L.hintSleepy;
+  else if (mood === 'scared') hint.textContent = L.hintScared;
+  else hint.textContent = L.hintDefault;
+}
+
+function showSpeech(catId, text) {
+  const el = document.getElementById('speech-' + catId);
+  el.textContent = text;
+  el.classList.add('visible');
+  if (speechTimers[catId]) clearTimeout(speechTimers[catId]);
+  speechTimers[catId] = setTimeout(() => el.classList.remove('visible'), 6000);
+}
+
+// ===== MAIN GAME ACTION (replaces API call) =====
+function doAction(action) {
+  if (busy) return;
+  busy = true;
+  document.querySelectorAll('.btn').forEach(b => b.style.opacity = '0.6');
+
+  const catId = selectedCat;
+  const otherId = 1 - catId;
+
+  // Tick both cats
+  cats[0].state.tick();
+  cats[1].state.tick();
+
+  const target = cats[catId];
+  const other = cats[otherId];
+  const state = target.state;
+  const otherState = other.state;
+
+  const catActions = ["", ""];
+  const texts = ["", ""];
+
+  if (action === "wait") {
+    const primary = decideResponse(state, null);
+    const reaction = decideCatReaction(otherState, primary);
+    catActions[catId] = primary;
+    catActions[otherId] = reaction;
+    texts[catId] = getActionText(primary);
+    texts[otherId] = getReactionText(reaction, lang().catNames[otherId]);
+  } else if (["feed","pet","play","talk"].includes(action)) {
+    const catAction = decideResponse(state, action);
+    const positive = wasPositiveInteraction(state, catAction);
+    state.applyAction(action);
+
+    target.totalInteractions++;
+    if (positive) target.positiveInteractions++;
+
+    if (positive) {
+      state.bondLevel = state.clamp(state.bondLevel + 0.02);
+    } else {
+      state.bondLevel = state.clamp(state.bondLevel - 0.01);
+    }
+
+    const otherAction = decideCatReaction(otherState, catAction);
+    if (catAction === "play_alone" && otherAction === "play_alone") {
+      otherState.happiness = otherState.clamp(otherState.happiness + 0.1);
+      otherState.energy = otherState.clamp(otherState.energy - 0.05);
+    } else if (otherAction === "purr" || otherAction === "rub") {
+      otherState.happiness = otherState.clamp(otherState.happiness + 0.05);
+    }
+
+    catActions[catId] = catAction;
+    catActions[otherId] = otherAction;
+    texts[catId] = getActionText(catAction);
+    texts[otherId] = getReactionText(otherAction, lang().catNames[otherId]);
+  }
+
+  // Update positions
+  for (let i = 0; i < 2; i++) {
+    if (catActions[i]) {
+      updatePosition(cats[i], catActions[i], cats[1 - i].pos);
+    }
+  }
+
+  // Build response data and update UI
+  updateUIFromState(catActions, texts);
+
+  document.querySelectorAll('.btn').forEach(b => b.style.opacity = '1');
+  busy = false;
+}
+
+function updateUIFromState(catActions, texts) {
+  const L = lang();
+  const hour = new Date().getHours();
+  const period = getTimePeriod(hour);
+
+  for (let i = 0; i < 2; i++) {
+    const c = cats[i];
+    const s = c.state;
+    catMoods[i] = s.mood;
+
+    if (texts && texts[i]) showSpeech(i, texts[i]);
+
+    document.getElementById('cat-' + i).className = 'cat ' + s.mood;
+
+    const [nx, ny] = c.pos;
+    const roomCat = document.getElementById('room-cat-' + i);
+    const oldLeft = parseFloat(roomCat.style.left) || 0;
+    const oldTop = parseFloat(roomCat.style.top) || 0;
+
+    if (Math.abs(nx - oldLeft) > 2 || Math.abs(ny - oldTop) > 2) {
+      roomCat.classList.add('walking');
+      setTimeout(() => roomCat.classList.remove('walking'), 1500);
+    }
+
+    roomCat.style.left = nx + '%';
+    roomCat.style.top = ny + '%';
+
+    const emoji = MOOD_EMOJI[s.mood] || '😺';
+    const moodText = L.mood[s.mood] || s.mood;
+    document.getElementById('mood-' + i).textContent = emoji + ' ' + moodText;
+
+    document.getElementById('bar-hunger-' + i).style.width = (s.hunger * 100) + '%';
+    document.getElementById('bar-energy-' + i).style.width = (s.energy * 100) + '%';
+    document.getElementById('bar-happiness-' + i).style.width = (s.happiness * 100) + '%';
+    document.getElementById('bar-curiosity-' + i).style.width = (s.curiosity * 100) + '%';
+    document.getElementById('bar-bond-' + i).style.width = (s.bondLevel * 100) + '%';
+    document.getElementById('bar-stress-' + i).style.width = (s.stress * 100) + '%';
+    document.getElementById('bar-trust-' + i).style.width = (s.trust * 100) + '%';
+    document.getElementById('bar-comfort-' + i).style.width = (s.comfort * 100) + '%';
+
+    const total = c.totalInteractions;
+    const pct = total > 0 ? Math.round((c.positiveInteractions / total) * 100) : 0;
+    document.getElementById('relationship-' + i).textContent = L.relFmt(total, pct);
+  }
+
+  document.body.className = period;
+  const tEmoji = TIME_EMOJI[period] || '🕐';
+  const periodName = L.time[period] || period;
+  const hourStr = String(hour).padStart(2, '0');
+  document.getElementById('time-badge').textContent = L.timeFmt(tEmoji, periodName, hourStr);
+
+  updateButtons();
+}
+
+// ===== AUTO-TICK (every 5 seconds) =====
+setInterval(() => {
+  if (busy) return;
+  cats[0].state.tick();
+  cats[1].state.tick();
+  updateUIFromState(null, null);
+}, 5000);
+
+// ===== INITIAL SETUP =====
+setLang(currentLang);
+updateUIFromState(null, null);
+</script>
+</body>
+</html>
