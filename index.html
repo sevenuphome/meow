@@ -504,6 +504,33 @@ h1 {
 .btn-talk { background: linear-gradient(135deg, #9c27b0, #6a1b9a); color: white; }
 .btn-wait { background: linear-gradient(135deg, #607d8b, #455a64); color: white; }
 
+.btn-autocare { background: linear-gradient(135deg, #43a047, #2e7d32); color: white; }
+.btn-autocare.active { background: linear-gradient(135deg, #e53935, #c62828); animation: autoPulse 2s ease infinite; }
+@keyframes autoPulse {
+  0%, 100% { box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+  50% { box-shadow: 0 3px 18px rgba(229,57,53,0.4); }
+}
+
+.autocare-log {
+  max-width: 600px;
+  width: 100%;
+  margin: 6px auto;
+  background: rgba(255,255,255,0.5);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 0.72em;
+  color: #555;
+  max-height: 80px;
+  overflow-y: auto;
+  display: none;
+}
+.autocare-log.visible { display: block; }
+.autocare-log div { padding: 1px 0; border-bottom: 1px solid rgba(0,0,0,0.04); }
+.autocare-log .log-time { color: #999; margin-right: 4px; }
+body.night .autocare-log, body.late_night .autocare-log { background: rgba(255,255,255,0.08); color: #bbb; }
+body.night .autocare-log .log-time, body.late_night .autocare-log .log-time { color: #666; }
+
 .hint { font-size: 0.72em; color: #aaa; margin-bottom: 4px; }
 .footer { margin-top: 10px; font-size: 0.72em; color: #bbb; }
 .footer a { color: #e91e63; text-decoration: none; }
@@ -713,7 +740,9 @@ body.night .lang-btn.active, body.late_night .lang-btn.active { background: #e91
   <button class="btn btn-play" id="btn-play" onclick="doAction('play')">🧶 เล่นด้วย</button>
   <button class="btn btn-talk" id="btn-talk" onclick="doAction('talk')">💬 พูดคุย</button>
   <button class="btn btn-wait" id="btn-wait" onclick="doAction('wait')">⏳ รอดู</button>
+  <button class="btn btn-autocare" id="btn-autocare" onclick="toggleAutoCare()">🧹 จ้างแม่บ้าน</button>
 </div>
+<div class="autocare-log" id="autocare-log"></div>
 
 <p class="footer">
   🧠 ML Brain (DQN) •
@@ -1159,7 +1188,12 @@ const I18N = {
     hintDefault: '💡 กดเลือกแมวในห้อง แล้วใช้ปุ่มด้านล่าง',
     hintSleepy: '😴 แมวกำลังหลับ... รอดูอย่างเดียวนะ',
     hintScared: '🙀 แมวกลัวมาก... อย่ายุ่ง รอให้สงบก่อน',
+    hintAutoCare: '🧹 แม่บ้านกำลังดูแลอยู่... นั่งพักได้เลย',
     errorMsg: '⚠️ เกิดข้อผิดพลาด',
+    autoCareOn: '🧹 ไล่แม่บ้านออก',
+    autoCareOff: '🧹 จ้างแม่บ้าน',
+    autoCareLog: { feed: 'ให้อาหาร', pet: 'ลูบหัว', play: 'ชวนเล่น', talk: 'พูดคุย', wait: 'ปล่อยไว้' },
+    autoCareWho: (name, action) => `ดูแล ${name}: ${action}`,
     personality: {
       0: [{e:'🦁',t:'กล้า'},{e:'🥰',t:'ขี้อ้อน'},{e:'🍗',t:'ชอบกิน'}],
       1: [{e:'🐭',t:'ขี้กลัว'},{e:'😎',t:'เฉย'},{e:'🥗',t:'เลือกกิน'}],
@@ -1178,7 +1212,12 @@ const I18N = {
     hintDefault: '💡 Select a cat in the room, then use buttons below',
     hintSleepy: '😴 Cat is sleeping... just wait',
     hintScared: '🙀 Cat is terrified... leave it alone',
+    hintAutoCare: '🧹 Caretaker is on duty... sit back and relax',
     errorMsg: '⚠️ Something went wrong',
+    autoCareOn: '🧹 Fire Caretaker',
+    autoCareOff: '🧹 Hire Caretaker',
+    autoCareLog: { feed: 'Fed', pet: 'Petted', play: 'Played with', talk: 'Talked to', wait: 'Left alone' },
+    autoCareWho: (name, action) => `${action} ${name}`,
     personality: {
       0: [{e:'🦁',t:'Bold'},{e:'🥰',t:'Cuddly'},{e:'🍗',t:'Foodie'}],
       1: [{e:'🐭',t:'Shy'},{e:'😎',t:'Aloof'},{e:'🥗',t:'Picky'}],
@@ -1197,7 +1236,12 @@ const I18N = {
     hintDefault: '💡 방에서 고양이를 선택한 후 아래 버튼을 사용하세요',
     hintSleepy: '😴 고양이가 자고 있어요... 기다려주세요',
     hintScared: '🙀 고양이가 무서워해요... 건드리지 마세요',
+    hintAutoCare: '🧹 도우미가 돌보고 있어요... 편히 쉬세요',
     errorMsg: '⚠️ 오류가 발생했습니다',
+    autoCareOn: '🧹 도우미 해고',
+    autoCareOff: '🧹 도우미 고용',
+    autoCareLog: { feed: '밥 줌', pet: '쓰다듬음', play: '놀아줌', talk: '대화함', wait: '지켜봄' },
+    autoCareWho: (name, action) => `${name} ${action}`,
     personality: {
       0: [{e:'🦁',t:'용감'},{e:'🥰',t:'애교쟁이'},{e:'🍗',t:'먹보'}],
       1: [{e:'🐭',t:'겁쟁이'},{e:'😎',t:'도도'},{e:'🥗',t:'까다로운'}],
@@ -1258,6 +1302,7 @@ function applyLang() {
   document.getElementById('btn-play').textContent = L.buttons.play;
   document.getElementById('btn-talk').textContent = L.buttons.talk;
   document.getElementById('btn-wait').textContent = L.buttons.wait;
+  document.getElementById('btn-autocare').textContent = autoCareOn ? L.autoCareOn : L.autoCareOff;
 
   updateButtons();
 }
@@ -1276,11 +1321,12 @@ function updateButtons() {
   const mood = catMoods[selectedCat];
   ['btn-feed', 'btn-pet', 'btn-play', 'btn-talk'].forEach(id => {
     const btn = document.getElementById(id);
-    if (mood === 'sleepy' || mood === 'scared') btn.classList.add('disabled');
+    if (mood === 'sleepy' || mood === 'scared' || autoCareOn) btn.classList.add('disabled');
     else btn.classList.remove('disabled');
   });
   const hint = document.getElementById('hint');
-  if (mood === 'sleepy') hint.textContent = L.hintSleepy;
+  if (autoCareOn) hint.textContent = L.hintAutoCare;
+  else if (mood === 'sleepy') hint.textContent = L.hintSleepy;
   else if (mood === 'scared') hint.textContent = L.hintScared;
   else hint.textContent = L.hintDefault;
 }
@@ -1415,6 +1461,111 @@ function updateUIFromState(catActions, texts) {
   document.getElementById('time-badge').textContent = L.timeFmt(tEmoji, periodName, hourStr);
 
   updateButtons();
+}
+
+// ===== AUTO-CARE (Caretaker AI) =====
+let autoCareOn = false;
+let autoCareTimer = null;
+
+function toggleAutoCare() {
+  autoCareOn = !autoCareOn;
+  const btn = document.getElementById('btn-autocare');
+  const log = document.getElementById('autocare-log');
+  const L = lang();
+
+  if (autoCareOn) {
+    btn.classList.add('active');
+    btn.textContent = L.autoCareOn;
+    log.classList.add('visible');
+    log.innerHTML = '';
+    autoCareTimer = setInterval(autoCareStep, 4000);
+    autoCareStep(); // first action immediately
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = L.autoCareOff;
+    log.classList.remove('visible');
+    if (autoCareTimer) { clearInterval(autoCareTimer); autoCareTimer = null; }
+  }
+  updateButtons();
+}
+
+function autoCareDecide(state) {
+  // Caretaker logic: prioritize by urgency
+  // Don't bother sleeping or scared cats
+  if (state.mood === 'sleepy' || state.mood === 'scared') return 'wait';
+
+  // Emergency: very hungry
+  if (state.hunger > 0.7) return 'feed';
+
+  // High stress: talk gently to calm down
+  if (state.stress > 0.5) return 'talk';
+
+  // Hungry
+  if (state.hunger > 0.5) return 'feed';
+
+  // Low energy: let them rest
+  if (state.energy < 0.25) return 'wait';
+
+  // Unhappy + trusting: pet
+  if (state.happiness < 0.4 && state.trust > 0.3) return 'pet';
+
+  // Has energy + curious or playful: play
+  if (state.energy > 0.4 && (state.curiosity > 0.5 || state.mood === 'playful')) return 'play';
+
+  // Low bond: talk to build relationship
+  if (state.bond < 0.3) return 'talk';
+
+  // Low trust: talk gently
+  if (state.trust < 0.3) return 'talk';
+
+  // Happy + bonded: pet for comfort
+  if (state.happiness > 0.5 && state.bond > 0.3) return 'pet';
+
+  // Default: rotate between actions
+  const actions = ['pet', 'talk', 'play', 'wait'];
+  return actions[Math.floor(Math.random() * actions.length)];
+}
+
+function autoCareStep() {
+  if (!autoCareOn || busy) return;
+
+  // Choose cat with most urgent need
+  const scores = cats.map((c, i) => {
+    const s = c.state;
+    let urgency = 0;
+    urgency += s.hunger * 3;
+    urgency += (1 - s.energy) * 1.5;
+    urgency += (1 - s.happiness) * 2;
+    urgency += s.stress * 2.5;
+    urgency += (1 - s.trust) * 1;
+    if (s.mood === 'sleepy' || s.mood === 'scared') urgency *= 0.1; // can't help much
+    return urgency;
+  });
+
+  const targetId = scores[0] >= scores[1] ? 0 : 1;
+  const action = autoCareDecide(cats[targetId].state);
+
+  // Perform the action
+  selectedCat = targetId;
+  document.querySelectorAll('.room-cat').forEach(c => c.classList.remove('selected'));
+  document.getElementById('room-cat-' + targetId).classList.add('selected');
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('stat-card-' + targetId).classList.add('selected');
+
+  doAction(action);
+
+  // Log it
+  const L = lang();
+  const logEl = document.getElementById('autocare-log');
+  const now = new Date();
+  const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  const actionName = L.autoCareLog[action] || action;
+  const catName = L.catNames[targetId];
+  const entry = document.createElement('div');
+  entry.innerHTML = `<span class="log-time">${timeStr}</span> ${L.autoCareWho(catName, actionName)}`;
+  logEl.prepend(entry);
+  // Keep max 10 entries
+  while (logEl.children.length > 10) logEl.removeChild(logEl.lastChild);
 }
 
 // ===== AUTO-TICK (every 5 seconds) =====
