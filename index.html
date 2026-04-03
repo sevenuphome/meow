@@ -511,6 +511,130 @@ h1 {
   50% { box-shadow: 0 3px 18px rgba(229,57,53,0.4); }
 }
 
+/* ===== MAID CHARACTER ===== */
+.maid {
+  position: absolute;
+  z-index: 5;
+  left: 46%;
+  top: 72%;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0);
+  transition: left 1.2s ease-in-out, top 1.2s ease-in-out, opacity 0.5s, transform 0.5s;
+}
+.maid.visible { opacity: 1; transform: scale(1); }
+.maid.walking { animation: maidWalk 0.4s ease infinite; }
+@keyframes maidWalk {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1) translateY(-5px); }
+}
+
+.maid-body { position: relative; width: 44px; text-align: center; }
+.maid-head {
+  width: 26px; height: 26px;
+  background: #ffcc80;
+  border-radius: 50%;
+  margin: 0 auto;
+  position: relative;
+}
+.maid-hair {
+  position: absolute; top: -3px; left: -2px;
+  width: 30px; height: 16px;
+  background: #5d4037;
+  border-radius: 15px 15px 0 0;
+}
+.maid-eyes {
+  position: absolute; top: 12px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 8px;
+}
+.maid-eye {
+  width: 4px; height: 4px;
+  background: #333;
+  border-radius: 50%;
+}
+.maid-mouth {
+  position: absolute; top: 18px; left: 50%;
+  transform: translateX(-50%);
+  width: 6px; height: 3px;
+  border-bottom: 1.5px solid #e91e63;
+  border-radius: 0 0 50% 50%;
+}
+.maid-dress {
+  width: 30px; height: 24px;
+  margin: -2px auto 0;
+  background: linear-gradient(180deg, #5c6bc0, #3949ab);
+  border-radius: 4px 4px 14px 14px;
+  position: relative;
+}
+.maid-apron {
+  position: absolute; top: 3px; left: 50%;
+  transform: translateX(-50%);
+  width: 16px; height: 18px;
+  background: white;
+  border-radius: 2px 2px 8px 8px;
+  border-top: 2px solid #e0e0e0;
+}
+.maid-arms {
+  position: absolute; top: 6px; width: 100%;
+}
+.maid-arm {
+  position: absolute;
+  width: 8px; height: 14px;
+  background: #ffcc80;
+  border-radius: 4px;
+}
+.maid-arm-l { left: -6px; transform: rotate(15deg); }
+.maid-arm-r { right: -6px; transform: rotate(-15deg); }
+.maid-arm-r.sweeping { animation: sweep 0.6s ease infinite; }
+@keyframes sweep {
+  0%, 100% { transform: rotate(-15deg); }
+  50% { transform: rotate(-45deg); }
+}
+.maid-legs {
+  display: flex; justify-content: center;
+  gap: 6px; margin-top: -1px;
+}
+.maid-leg {
+  width: 7px; height: 12px;
+  background: #ffcc80;
+  border-radius: 0 0 3px 3px;
+}
+.maid-shoe {
+  width: 9px; height: 4px;
+  background: #333;
+  border-radius: 0 0 4px 4px;
+  margin: 0 auto;
+}
+.maid-tool {
+  position: absolute; top: 4px; right: -14px;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+.maid-speech {
+  position: absolute; bottom: 82px; left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 10px;
+  padding: 3px 8px;
+  font-size: 0.65em;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  opacity: 0; transition: opacity 0.4s;
+  pointer-events: none; z-index: 11;
+}
+.maid-speech.visible { opacity: 1; }
+.maid-speech::after {
+  content: ''; position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top: 5px solid white;
+}
+body.night .maid-speech, body.late_night .maid-speech { background: rgba(255,255,255,0.15); color: #e0e0e0; }
+body.night .maid-speech::after, body.late_night .maid-speech::after { border-top-color: rgba(255,255,255,0.15); }
+body.night .maid-dress, body.late_night .maid-dress { background: linear-gradient(180deg, #3949ab, #283593); }
+
 .autocare-log {
   max-width: 600px;
   width: 100%;
@@ -642,6 +766,30 @@ body.night .lang-btn.active, body.late_night .lang-btn.active { background: #e91
       </div>
     </div>
     <div class="cat-tag">เทา</div>
+  </div>
+
+  <!-- Maid character -->
+  <div class="maid" id="maid" style="left:50%;top:80%">
+    <div class="maid-speech" id="maid-speech"></div>
+    <div class="maid-body">
+      <div class="maid-head">
+        <div class="maid-hair"></div>
+        <div class="maid-eyes"><div class="maid-eye"></div><div class="maid-eye"></div></div>
+        <div class="maid-mouth"></div>
+      </div>
+      <div class="maid-dress">
+        <div class="maid-apron"></div>
+      </div>
+      <div class="maid-arms">
+        <div class="maid-arm maid-arm-l"></div>
+        <div class="maid-arm maid-arm-r"></div>
+      </div>
+      <div class="maid-legs">
+        <div class="maid-leg"><div class="maid-shoe"></div></div>
+        <div class="maid-leg"><div class="maid-shoe"></div></div>
+      </div>
+      <div class="maid-tool" id="maid-tool">🧹</div>
+    </div>
   </div>
 </div>
 
@@ -1194,6 +1342,7 @@ const I18N = {
     autoCareOff: '🧹 จ้างแม่บ้าน',
     autoCareLog: { feed: 'ให้อาหาร', pet: 'ลูบหัว', play: 'ชวนเล่น', talk: 'พูดคุย', wait: 'ปล่อยไว้' },
     autoCareWho: (name, action) => `ดูแล ${name}: ${action}`,
+    maidSpeech: { arrive: 'มาแล้วจ้า~', feed: 'ข้าวเจ้านะ~', pet: 'เด็กดี~', play: 'มาเล่นกัน~', talk: 'คุยกันนะ~', wait: 'หนูสบายดีนะ~', leave: 'ไปก่อนนะจ้า~' },
     personality: {
       0: [{e:'🦁',t:'กล้า'},{e:'🥰',t:'ขี้อ้อน'},{e:'🍗',t:'ชอบกิน'}],
       1: [{e:'🐭',t:'ขี้กลัว'},{e:'😎',t:'เฉย'},{e:'🥗',t:'เลือกกิน'}],
@@ -1218,6 +1367,7 @@ const I18N = {
     autoCareOff: '🧹 Hire Caretaker',
     autoCareLog: { feed: 'Fed', pet: 'Petted', play: 'Played with', talk: 'Talked to', wait: 'Left alone' },
     autoCareWho: (name, action) => `${action} ${name}`,
+    maidSpeech: { arrive: 'I\'m here~', feed: 'Dinnertime~', pet: 'Good kitty~', play: 'Let\'s play~', talk: 'Hey there~', wait: 'You\'re fine~', leave: 'See you later~' },
     personality: {
       0: [{e:'🦁',t:'Bold'},{e:'🥰',t:'Cuddly'},{e:'🍗',t:'Foodie'}],
       1: [{e:'🐭',t:'Shy'},{e:'😎',t:'Aloof'},{e:'🥗',t:'Picky'}],
@@ -1242,6 +1392,7 @@ const I18N = {
     autoCareOff: '🧹 도우미 고용',
     autoCareLog: { feed: '밥 줌', pet: '쓰다듬음', play: '놀아줌', talk: '대화함', wait: '지켜봄' },
     autoCareWho: (name, action) => `${name} ${action}`,
+    maidSpeech: { arrive: '왔어요~', feed: '밥이에요~', pet: '착하지~', play: '같이 놀자~', talk: '안녕~', wait: '괜찮아~', leave: '다음에 또 올게요~' },
     personality: {
       0: [{e:'🦁',t:'용감'},{e:'🥰',t:'애교쟁이'},{e:'🍗',t:'먹보'}],
       1: [{e:'🐭',t:'겁쟁이'},{e:'😎',t:'도도'},{e:'🥗',t:'까다로운'}],
@@ -1467,10 +1618,25 @@ function updateUIFromState(catActions, texts) {
 let autoCareOn = false;
 let autoCareTimer = null;
 
+function showMaidSpeech(text) {
+  const el = document.getElementById('maid-speech');
+  el.textContent = text;
+  el.classList.add('visible');
+  clearTimeout(showMaidSpeech._t);
+  showMaidSpeech._t = setTimeout(() => el.classList.remove('visible'), 2500);
+}
+
+function moveMaidTo(x, y) {
+  const maid = document.getElementById('maid');
+  maid.style.left = x + '%';
+  maid.style.top = y + '%';
+}
+
 function toggleAutoCare() {
   autoCareOn = !autoCareOn;
   const btn = document.getElementById('btn-autocare');
   const log = document.getElementById('autocare-log');
+  const maid = document.getElementById('maid');
   const L = lang();
 
   if (autoCareOn) {
@@ -1478,13 +1644,21 @@ function toggleAutoCare() {
     btn.textContent = L.autoCareOn;
     log.classList.add('visible');
     log.innerHTML = '';
+    // Show maid entering from bottom
+    maid.classList.add('visible');
+    moveMaidTo(50, 80);
+    showMaidSpeech(L.maidSpeech.arrive);
     autoCareTimer = setInterval(autoCareStep, 4000);
-    autoCareStep(); // first action immediately
+    setTimeout(autoCareStep, 1500); // first action after entrance
   } else {
     btn.classList.remove('active');
     btn.textContent = L.autoCareOff;
     log.classList.remove('visible');
     if (autoCareTimer) { clearInterval(autoCareTimer); autoCareTimer = null; }
+    // Maid leaves
+    showMaidSpeech(L.maidSpeech.leave);
+    moveMaidTo(50, 90);
+    setTimeout(() => { maid.classList.remove('visible'); }, 1500);
   }
   updateButtons();
 }
@@ -1544,6 +1718,26 @@ function autoCareStep() {
 
   const targetId = scores[0] >= scores[1] ? 0 : 1;
   const action = autoCareDecide(cats[targetId].state);
+  const L = lang();
+
+  // Move maid toward target cat
+  const catEl = document.getElementById('room-cat-' + targetId);
+  const catX = parseInt(catEl.style.left) || (targetId === 0 ? 30 : 70);
+  const catY = parseInt(catEl.style.top) || (targetId === 0 ? 55 : 45);
+  // Position maid near the cat but offset slightly
+  moveMaidTo(Math.max(5, Math.min(88, catX - 10)), Math.max(12, Math.min(82, catY + 5)));
+
+  // Update maid tool emoji & arm animation
+  const toolEmoji = { feed: '🍖', pet: '🤚', play: '🧶', talk: '💬', wait: '🧹' };
+  document.getElementById('maid-tool').textContent = toolEmoji[action] || '🧹';
+  const rightArm = document.querySelector('.maid-arm-r');
+  if (action !== 'wait') {
+    rightArm.classList.add('sweeping');
+    setTimeout(() => rightArm.classList.remove('sweeping'), 2000);
+  }
+
+  // Maid speech
+  showMaidSpeech(L.maidSpeech[action] || L.maidSpeech.arrive);
 
   // Perform the action
   selectedCat = targetId;
@@ -1555,7 +1749,6 @@ function autoCareStep() {
   doAction(action);
 
   // Log it
-  const L = lang();
   const logEl = document.getElementById('autocare-log');
   const now = new Date();
   const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
