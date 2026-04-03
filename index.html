@@ -931,99 +931,81 @@ class CatState {
 
 // ===== ACTION TEXT (ported from brain.py) =====
 const ACTION_TEXT = {
-  purr: [
-    "แมวครางเบา ๆ อย่างมีความสุข... prrrr~",
-    "แมวหลับตาแล้วครางเสียงดัง นี่มันพอใจมาก",
-    "เสียงครางเบา ๆ ดังขึ้นจากลำคอ... แมวดูผ่อนคลาย",
-  ],
-  meow: [
-    "เมี้ยว~! แมวร้องเรียกความสนใจ",
-    "แมวเดินมาเสียดสีขาพร้อมร้อง เมี้ยว!",
-    "เมี้ยววว... แมวนั่งจ้องด้วยตาโต",
-  ],
-  hiss: [
-    "ฟืดดด! แมวขู่แล้วเดินหนีไป",
-    "แมวหูแนบหัว ดวงตาเหลือบมอง... อย่ามายุ่ง",
-    "แมวสะบัดหางแรง ๆ แล้วเดินจากไป",
-  ],
-  nap: [
-    "แมวม้วนตัวเป็นก้อนกลม ๆ แล้วหลับไป... zzz",
-    "แมวหาวยาว แล้วหลับตาลง... นอนเลย",
-    "แมวเดินไปนอนในที่อุ่น ๆ แล้วนอนหลับสนิท",
-  ],
-  play_alone: [
-    "แมวกระโดดไล่จับอะไรบางอย่างที่มองไม่เห็น!",
-    "แมวตบลูกบอลไปมาอย่างสนุกสนาน",
-    "แมวกระโดดตัวลอย! เล่นกับเงาตัวเอง",
-  ],
-  explore: [
-    "แมวเดินสำรวจรอบ ๆ อย่างระมัดระวัง...",
-    "แมวดมนู่นดมนี่ หูตั้งชัน สนใจทุกอย่าง",
-    "แมวกระโดดขึ้นที่สูงเพื่อสำรวจ มองลงมาอย่างภาคภูมิ",
-  ],
-  eat: [
-    "แมวเดินไปที่ชามอาหารแล้วกินอย่างเอร็ดอร่อย",
-    "มุบมิบ มุบมิบ... แมวกินข้าวอย่างตั้งใจ",
-    "แมวเลียปากหลังกินอิ่ม แล้วนั่งเลียขน",
-  ],
-  ignore: [
-    "... แมวเมินไปเลย ไม่สนใจแม้แต่นิดเดียว",
-    "แมวหันหลังให้ แกล้งทำเป็นไม่เห็น",
-    "แมวนั่งเลียขนอย่างไม่แยแส ราวกับไม่มีใครอยู่",
-  ],
-  rub: [
-    "แมวเดินมาเสียดสีที่ขา แสดงความรัก~",
-    "แมวเอาหัวมาดุนมือ... อยากให้ลูบ",
-    "แมวนอนหงายท้องให้! ...แต่อาจเป็นกับดักนะ",
-  ],
-  stare: [
-    "แมวนั่งจ้องนิ่ง ๆ... ดวงตากลมโตไม่กะพริบ",
-    "แมวมองจากมุมห้อง ใครจะรู้ว่าคิดอะไร...",
-    "แมวเอียงหัว จ้องมองอย่างสงสัย...",
-  ],
+  th: {
+    purr: ["แมวครางเบา ๆ อย่างมีความสุข... prrrr~","แมวหลับตาแล้วครางเสียงดัง นี่มันพอใจมาก","เสียงครางเบา ๆ ดังขึ้นจากลำคอ... แมวดูผ่อนคลาย"],
+    meow: ["เมี้ยว~! แมวร้องเรียกความสนใจ","แมวเดินมาเสียดสีขาพร้อมร้อง เมี้ยว!","เมี้ยววว... แมวนั่งจ้องด้วยตาโต"],
+    hiss: ["ฟืดดด! แมวขู่แล้วเดินหนีไป","แมวหูแนบหัว ดวงตาเหลือบมอง... อย่ามายุ่ง","แมวสะบัดหางแรง ๆ แล้วเดินจากไป"],
+    nap: ["แมวม้วนตัวเป็นก้อนกลม ๆ แล้วหลับไป... zzz","แมวหาวยาว แล้วหลับตาลง... นอนเลย","แมวเดินไปนอนในที่อุ่น ๆ แล้วนอนหลับสนิท"],
+    play_alone: ["แมวกระโดดไล่จับอะไรบางอย่างที่มองไม่เห็น!","แมวตบลูกบอลไปมาอย่างสนุกสนาน","แมวกระโดดตัวลอย! เล่นกับเงาตัวเอง"],
+    explore: ["แมวเดินสำรวจรอบ ๆ อย่างระมัดระวัง...","แมวดมนู่นดมนี่ หูตั้งชัน สนใจทุกอย่าง","แมวกระโดดขึ้นที่สูงเพื่อสำรวจ มองลงมาอย่างภาคภูมิ"],
+    eat: ["แมวเดินไปที่ชามอาหารแล้วกินอย่างเอร็ดอร่อย","มุบมิบ มุบมิบ... แมวกินข้าวอย่างตั้งใจ","แมวเลียปากหลังกินอิ่ม แล้วนั่งเลียขน"],
+    ignore: ["... แมวเมินไปเลย ไม่สนใจแม้แต่นิดเดียว","แมวหันหลังให้ แกล้งทำเป็นไม่เห็น","แมวนั่งเลียขนอย่างไม่แยแส ราวกับไม่มีใครอยู่"],
+    rub: ["แมวเดินมาเสียดสีที่ขา แสดงความรัก~","แมวเอาหัวมาดุนมือ... อยากให้ลูบ","แมวนอนหงายท้องให้! ...แต่อาจเป็นกับดักนะ"],
+    stare: ["แมวนั่งจ้องนิ่ง ๆ... ดวงตากลมโตไม่กะพริบ","แมวมองจากมุมห้อง ใครจะรู้ว่าคิดอะไร...","แมวเอียงหัว จ้องมองอย่างสงสัย..."],
+  },
+  en: {
+    purr: ["Cat purrs softly with happiness... prrrr~","Cat closes eyes and purrs loudly. So content!","A gentle rumble rises from the throat... cat looks relaxed"],
+    meow: ["Meow~! Cat calls for attention","Cat rubs against your leg, meowing!","Meooow... cat stares at you with big round eyes"],
+    hiss: ["Hssss! Cat hisses and backs away","Cat flattens ears, eyes narrowed... don't touch me","Cat flicks tail hard and walks away"],
+    nap: ["Cat curls into a little ball and falls asleep... zzz","Cat yawns wide, then closes eyes... goodnight","Cat walks to a warm spot and falls fast asleep"],
+    play_alone: ["Cat pounces at something invisible!","Cat bats a ball around playfully","Cat leaps into the air! Playing with its own shadow"],
+    explore: ["Cat walks around exploring carefully...","Cat sniffs everything, ears perked, curious about all","Cat jumps up high to explore, looking down proudly"],
+    eat: ["Cat walks to the food bowl and eats happily","Munch munch munch... cat eats with focus","Cat licks its lips after eating, then grooms itself"],
+    ignore: ["... Cat ignores you completely","Cat turns its back, pretending not to see","Cat grooms itself indifferently, as if no one exists"],
+    rub: ["Cat rubs against your leg lovingly~","Cat headbutts your hand... wants pets","Cat rolls over showing belly! ...could be a trap though"],
+    stare: ["Cat sits perfectly still... big round eyes unblinking","Cat watches from the corner. Who knows what it's thinking...","Cat tilts head, staring curiously..."],
+  },
+  ko: {
+    purr: ["고양이가 행복하게 그르릉... prrrr~","고양이가 눈을 감고 크게 그르릉. 아주 만족스러워!","목에서 부드러운 진동이... 고양이가 편안해 보여"],
+    meow: ["냐옹~! 고양이가 관심을 요구해","고양이가 다리에 비비며 냐옹!","냐오옹... 고양이가 큰 눈으로 쳐다봐"],
+    hiss: ["하악! 고양이가 으르렁대며 물러나","고양이가 귀를 납작하게... 건드리지 마","고양이가 꼬리를 세게 흔들며 떠나가"],
+    nap: ["고양이가 동그랗게 말려 잠들어... zzz","고양이가 크게 하품하고 눈을 감아... 잘 자","고양이가 따뜻한 곳으로 가서 깊이 잠들어"],
+    play_alone: ["고양이가 보이지 않는 무언가를 잡으려 뛰어!","고양이가 공을 신나게 굴려","고양이가 공중 점프! 자기 그림자와 놀아"],
+    explore: ["고양이가 조심스럽게 주변을 탐험해...","고양이가 여기저기 냄새 맡아, 귀를 쫑긋, 모든 것이 궁금해","고양이가 높은 곳에 올라 탐험, 자랑스럽게 내려다봐"],
+    eat: ["고양이가 밥그릇으로 가서 맛있게 먹어","냠냠냠... 고양이가 집중해서 먹어","고양이가 다 먹고 입맛을 다시며 그루밍"],
+    ignore: ["... 고양이가 완전히 무시해","고양이가 등을 돌려, 안 보이는 척","고양이가 무관심하게 그루밍, 아무도 없는 것처럼"],
+    rub: ["고양이가 다리에 살살 비벼~","고양이가 머리로 손을 쿡... 쓰다듬어줘","고양이가 배를 보여줘! ...함정일 수도 있지만"],
+    stare: ["고양이가 완전히 멈춰... 큰 눈 깜빡임 없이","고양이가 구석에서 지켜봐. 무슨 생각일까...","고양이가 고개를 기울여 호기심 어린 눈으로..."],
+  },
 };
 
 const CAT_REACTION_TEXT = {
-  purr: [
-    "{name} ก็ครางตาม... prrrr~",
-    "{name} หลับตาแล้วครางเบา ๆ ด้วย",
-  ],
-  rub: [
-    "{name} เดินมาเสียดสีอีกตัว",
-    "{name} เอาหัวมาดุนเพื่อน",
-  ],
-  play_alone: [
-    "{name} กระโดดเข้าร่วมเล่นด้วย!",
-    "{name} ไล่ตบอีกตัวเล่น!",
-  ],
-  meow: [
-    "{name} ร้องตอบ เมี้ยว~!",
-    "{name} ร้องตาม เหมือนคุยกัน",
-  ],
-  hiss: [
-    "{name} ขู่กลับ ฟืดดด!",
-    "{name} ขนพอง ไม่พอใจ!",
-  ],
-  nap: [
-    "{name} ม้วนตัวนอนตาม... zzz",
-    "{name} นอนต่อ ไม่สนใจ",
-  ],
-  stare: [
-    "{name} จ้องมองอีกตัวนิ่ง ๆ...",
-    "{name} เอียงหัวดู",
-  ],
-  ignore: [
-    "{name} เมินไปเลย ไม่แยแส",
-    "{name} เดินจากไป",
-  ],
-  explore: [
-    "{name} เดินไปดมดู อยากรู้อยากเห็น",
-    "{name} แอบไปสำรวจต่อ",
-  ],
-  eat: [
-    "{name} แย่งไปกินด้วย!",
-    "{name} วิ่งมาที่ชามอาหาร!",
-  ],
+  th: {
+    purr: ["{name} ก็ครางตาม... prrrr~","{name} หลับตาแล้วครางเบา ๆ ด้วย"],
+    rub: ["{name} เดินมาเสียดสีอีกตัว","{name} เอาหัวมาดุนเพื่อน"],
+    play_alone: ["{name} กระโดดเข้าร่วมเล่นด้วย!","{name} ไล่ตบอีกตัวเล่น!"],
+    meow: ["{name} ร้องตอบ เมี้ยว~!","{name} ร้องตาม เหมือนคุยกัน"],
+    hiss: ["{name} ขู่กลับ ฟืดดด!","{name} ขนพอง ไม่พอใจ!"],
+    nap: ["{name} ม้วนตัวนอนตาม... zzz","{name} นอนต่อ ไม่สนใจ"],
+    stare: ["{name} จ้องมองอีกตัวนิ่ง ๆ...","{name} เอียงหัวดู"],
+    ignore: ["{name} เมินไปเลย ไม่แยแส","{name} เดินจากไป"],
+    explore: ["{name} เดินไปดมดู อยากรู้อยากเห็น","{name} แอบไปสำรวจต่อ"],
+    eat: ["{name} แย่งไปกินด้วย!","{name} วิ่งมาที่ชามอาหาร!"],
+  },
+  en: {
+    purr: ["{name} purrs along... prrrr~","{name} closes eyes and purrs softly too"],
+    rub: ["{name} rubs against the other cat","{name} headbutts their friend"],
+    play_alone: ["{name} jumps in to play too!","{name} playfully swats the other!"],
+    meow: ["{name} meows back~!","{name} meows along, like a conversation"],
+    hiss: ["{name} hisses back! Hssss!","{name} puffs up, not happy!"],
+    nap: ["{name} curls up and naps too... zzz","{name} keeps sleeping, unbothered"],
+    stare: ["{name} stares at the other cat...","{name} tilts head watching"],
+    ignore: ["{name} ignores it completely","{name} walks away"],
+    explore: ["{name} goes to sniff around curiously","{name} sneaks off to explore more"],
+    eat: ["{name} rushes to eat too!","{name} runs to the food bowl!"],
+  },
+  ko: {
+    purr: ["{name}도 따라서 그르릉... prrrr~","{name}이(가) 눈을 감고 살짝 그르릉"],
+    rub: ["{name}이(가) 다른 고양이에게 비벼","{name}이(가) 친구에게 머리를 쿡"],
+    play_alone: ["{name}이(가) 같이 놀자고 뛰어들어!","{name}이(가) 장난스럽게 다른 고양이를 톡!"],
+    meow: ["{name}이(가) 냐옹으로 대답~!","{name}이(가) 따라 울어, 대화하는 것 같아"],
+    hiss: ["{name}이(가) 하악! 으르렁 대응!","{name}이(가) 털을 세워, 불만!"],
+    nap: ["{name}이(가) 따라 잠들어... zzz","{name}이(가) 계속 자, 신경 안 써"],
+    stare: ["{name}이(가) 다른 고양이를 뚫어져라 쳐다봐...","{name}이(가) 고개를 기울여 관찰"],
+    ignore: ["{name}이(가) 완전히 무시해","{name}이(가) 그냥 떠나가"],
+    explore: ["{name}이(가) 호기심에 냄새 맡으러 가","{name}이(가) 몰래 더 탐험하러 가"],
+    eat: ["{name}이(가) 같이 먹으려고 달려가!","{name}이(가) 밥그릇으로 달려가!"],
+  },
 };
 
 // ===== BRAIN =====
@@ -1073,12 +1055,14 @@ function decideCatReaction(reactorState, actorAction) {
 }
 
 function getActionText(action) {
-  const texts = ACTION_TEXT[action] || ["แมวทำ " + action + "..."];
+  const langTexts = ACTION_TEXT[currentLang] || ACTION_TEXT.en;
+  const texts = langTexts[action] || ["..."];
   return randChoice(texts);
 }
 
 function getReactionText(action, catName) {
-  const texts = CAT_REACTION_TEXT[action] || [catName + " จ้องมอง..."];
+  const langTexts = CAT_REACTION_TEXT[currentLang] || CAT_REACTION_TEXT.en;
+  const texts = langTexts[action] || [catName + "..."];
   const text = randChoice(texts);
   return text.replace("{name}", catName);
 }
