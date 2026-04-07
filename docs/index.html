@@ -1,0 +1,2509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐱 Cat Brain AI</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: linear-gradient(160deg, #0f0e2e 0%, #1a1850 50%, #0f0e2e 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 12px 20px;
+  color: #ffffff;
+  transition: background 1s ease;
+}
+
+/* Time-of-day overrides are removed — we keep a permanent dark theme */
+body.dawn, body.morning, body.afternoon, body.evening, body.night, body.late_night {
+  background: linear-gradient(160deg, #0f0e2e 0%, #1a1850 50%, #0f0e2e 100%);
+  color: #ffffff;
+}
+
+/* ===== GLASSMORPHISM UTILITY ===== */
+.glass {
+  background: rgba(100, 80, 180, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+}
+
+/* ===== HEADER ===== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 480px;
+  padding: 14px 4px 8px;
+}
+.header-left {
+  font-size: 1.3em;
+  font-weight: 800;
+  color: #FF8C42;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.time-badge {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.78em;
+  color: #b8b0d0;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.music-btn {
+  background: none;
+  border: none;
+  font-size: 1em;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s, transform 0.2s;
+  padding: 2px;
+}
+.music-btn:hover { opacity: 1; }
+.music-btn.playing { opacity: 1; }
+@keyframes musicPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+.settings-btn {
+  background: none;
+  border: none;
+  font-size: 1.3em;
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.settings-btn:hover { opacity: 1; }
+
+/* ===== ROOM ===== */
+.room {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 300px;
+  background: url('sprites/bg.png') center/cover no-repeat;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  overflow: hidden;
+  margin: 0 auto 10px;
+}
+
+.room-deco {
+  position: absolute;
+  font-size: 1.6em;
+  z-index: 1;
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ===== ROOM CAT ===== */
+.room-cat {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  transition: left 1.5s ease-in-out, top 1.5s ease-in-out;
+  cursor: pointer;
+  z-index: 2;
+  --cat-main: #ff9800;
+  --cat-dark: #e65100;
+  --cat-light: #ffb74d;
+}
+.room-cat.gray {
+  --cat-main: #9e9e9e;
+  --cat-dark: #616161;
+  --cat-light: #bdbdbd;
+}
+
+/* Video sprite overlay */
+.cat-sprite {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 5;
+}
+.room-cat.kitten .cat-sprite { width: 80px; }
+.room-cat.senior .cat-sprite { width: 120px; }
+
+.room-cat.selected .cat-area {
+  filter: drop-shadow(0 0 8px rgba(255,140,66,0.5));
+}
+.room-cat.selected .cat-sprite {
+  filter: drop-shadow(0 0 8px rgba(255,140,66,0.5));
+}
+
+.room-cat .cat-area {
+  position: absolute;
+  width: 200px;
+  height: 210px;
+  bottom: 5px;
+  left: -100px;
+  transform: scale(0.5);
+  transform-origin: bottom center;
+  pointer-events: none;
+  transition: filter 0.3s;
+}
+
+/* Floating speech bubble */
+.room-speech {
+  position: absolute;
+  bottom: 78px;
+  left: 0;
+  transform: translateX(-50%);
+  background: rgba(100, 80, 180, 0.35);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 5px 10px;
+  font-size: 0.7em;
+  max-width: 160px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s;
+  color: #e0d8f0;
+}
+.room-speech.visible { opacity: 1; }
+.room-speech::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top: 6px solid rgba(100, 80, 180, 0.35);
+}
+
+/* Cat name tag */
+.cat-tag {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 0.65em;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgba(255,140,66,0.85);
+  color: white;
+  padding: 1px 8px;
+  border-radius: 8px;
+  z-index: 3;
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+
+/* Walking bounce */
+.room-cat.walking .cat-area {
+  animation: walkBounce 0.3s ease infinite;
+}
+@keyframes walkBounce {
+  0%, 100% { transform: scale(0.5) translateY(0); }
+  50% { transform: scale(0.5) translateY(-6px); }
+}
+
+/* Life stage scaling */
+.room-cat.kitten .cat-area {
+  transform: scale(0.35);
+  transform-origin: bottom center;
+}
+.room-cat.kitten.walking .cat-area {
+  animation: walkBounceKitten 0.3s ease infinite;
+}
+@keyframes walkBounceKitten {
+  0%, 100% { transform: scale(0.35) translateY(0); }
+  50% { transform: scale(0.35) translateY(-6px); }
+}
+.room-cat.senior .eye { height: 12px; }
+.room-cat.senior { transition: left 3s ease-in-out, top 3s ease-in-out; }
+
+/* ===== CAT BODY ===== */
+.cat {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.5s ease;
+}
+
+.cat-body {
+  width: 110px;
+  height: 90px;
+  background: var(--cat-main);
+  border-radius: 50% 50% 45% 45%;
+  position: relative;
+}
+
+.cat-body::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 18px;
+  width: 74px;
+  height: 5px;
+  background: var(--cat-dark);
+  border-radius: 3px;
+  box-shadow: 0 14px 0 var(--cat-dark), 0 28px 0 var(--cat-dark);
+}
+
+.ear {
+  position: absolute;
+  top: -18px;
+  width: 0; height: 0;
+  border-left: 16px solid transparent;
+  border-right: 16px solid transparent;
+  border-bottom: 28px solid var(--cat-main);
+}
+.ear-left { left: 8px; }
+.ear-right { right: 8px; }
+.ear::after {
+  content: '';
+  position: absolute;
+  top: 9px; left: -7px;
+  width: 0; height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 14px solid var(--cat-light);
+}
+
+.eyes {
+  position: absolute;
+  top: 28px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 22px;
+}
+.eye {
+  width: 20px; height: 20px;
+  background: white;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+}
+.pupil {
+  width: 11px; height: 13px;
+  background: #333;
+  border-radius: 50%;
+  position: absolute;
+  top: 4px; left: 5px;
+  transition: all 0.3s ease;
+}
+.pupil::after {
+  content: '';
+  width: 4px; height: 4px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px; left: 2px;
+}
+
+.nose {
+  position: absolute;
+  top: 50px; left: 50%;
+  transform: translateX(-50%);
+  width: 9px; height: 6px;
+  background: #e91e63;
+  border-radius: 50% 50% 40% 40%;
+}
+.mouth {
+  position: absolute;
+  top: 54px; left: 50%;
+  transform: translateX(-50%);
+  width: 18px; height: 9px;
+  border-bottom: 2px solid #795548;
+  border-radius: 0 0 50% 50%;
+}
+
+.whiskers { position: absolute; top: 48px; width: 100%; }
+.whisker {
+  position: absolute;
+  width: 30px; height: 2px;
+  background: #795548;
+  border-radius: 1px;
+}
+.whisker-l1 { left: -12px; top: 0; transform: rotate(-10deg); }
+.whisker-l2 { left: -14px; top: 7px; transform: rotate(5deg); }
+.whisker-r1 { right: -12px; top: 0; transform: rotate(10deg); }
+.whisker-r2 { right: -14px; top: 7px; transform: rotate(-5deg); }
+
+.tail {
+  position: absolute;
+  bottom: 25px; right: -22px;
+  width: 45px; height: 55px;
+  border-right: 7px solid var(--cat-main);
+  border-top: 7px solid var(--cat-main);
+  border-radius: 0 45px 0 0;
+  animation: tailWag 2s ease-in-out infinite;
+}
+@keyframes tailWag {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(15deg); }
+}
+
+.paws {
+  position: absolute;
+  bottom: -7px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 26px;
+}
+.paw {
+  width: 20px; height: 10px;
+  background: var(--cat-light);
+  border-radius: 50%;
+}
+
+/* ===== MOOD ANIMATIONS ===== */
+.cat.happy .tail { animation: tailWag 1s ease-in-out infinite; }
+.cat.happy { animation: bounce 1s ease infinite; }
+@keyframes bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-8px); }
+}
+
+.cat.playful { animation: playfulBounce 0.6s ease infinite; }
+@keyframes playfulBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+  25% { transform: translateX(-50%) translateY(-12px) rotate(-5deg); }
+  75% { transform: translateX(-50%) translateY(-8px) rotate(5deg); }
+}
+
+.cat.sleepy .eye { height: 5px; }
+.cat.sleepy .pupil { display: none; }
+.cat.sleepy { animation: sleepyNod 3s ease-in-out infinite; }
+@keyframes sleepyNod {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(5px); }
+}
+
+.cat.hungry .pupil { width: 14px; height: 14px; top: 3px; left: 3px; }
+.cat.hungry { animation: hungryShake 0.5s ease infinite; }
+@keyframes hungryShake {
+  0%, 100% { transform: translateX(-50%); }
+  25% { transform: translateX(calc(-50% - 3px)); }
+  75% { transform: translateX(calc(-50% + 3px)); }
+}
+
+.cat.annoyed .ear-left { transform: rotate(-20deg); }
+.cat.annoyed .ear-right { transform: rotate(20deg); }
+.cat.annoyed .pupil { width: 5px; height: 16px; top: 2px; left: 8px; }
+.cat.annoyed .tail { animation: tailFlick 0.4s ease infinite; }
+@keyframes tailFlick {
+  0%, 100% { transform: rotate(-20deg); }
+  50% { transform: rotate(30deg); }
+}
+
+.cat.curious .pupil { width: 14px; height: 14px; top: 3px; left: 3px; }
+.cat.curious { animation: curiousTilt 2s ease-in-out infinite; }
+@keyframes curiousTilt {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  50% { transform: translateX(-50%) rotate(10deg); }
+}
+
+.cat.scared .pupil { width: 16px; height: 16px; top: 2px; left: 2px; }
+.cat.scared .ear-left { transform: rotate(-25deg); }
+.cat.scared .ear-right { transform: rotate(25deg); }
+.cat.scared { animation: scaredShake 0.2s ease infinite; }
+@keyframes scaredShake {
+  0%, 100% { transform: translateX(-50%); }
+  25% { transform: translateX(calc(-50% - 4px)); }
+  75% { transform: translateX(calc(-50% + 4px)); }
+}
+
+.cat.relaxed .eye { height: 8px; }
+.cat.relaxed .pupil { width: 8px; height: 6px; top: 1px; left: 6px; }
+.cat.relaxed .tail { animation: tailWag 3s ease-in-out infinite; }
+.cat.relaxed { animation: relaxedBreath 3s ease-in-out infinite; }
+@keyframes relaxedBreath {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.02); }
+}
+
+.zzz {
+  position: absolute;
+  top: 0; right: 8px;
+  font-size: 1.3em;
+  opacity: 0;
+  display: none;
+}
+.cat.sleepy .zzz {
+  display: block;
+  animation: floatUp 2s ease-in-out infinite;
+}
+@keyframes floatUp {
+  0% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-25px); }
+}
+
+/* ===== CAT STAT CARDS ===== */
+.cards-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto 10px;
+}
+
+.cat-card {
+  flex: 1;
+  max-width: 480px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 16px;
+  padding: 10px 12px 8px;
+  cursor: pointer;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.cat-card.selected {
+  border-color: #FF8C42;
+  box-shadow: 0 0 16px rgba(255,140,66,0.2);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.cat-badge {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65em;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+.card-name {
+  font-weight: 700;
+  font-size: 0.82em;
+  color: #fff;
+}
+.card-stage {
+  font-size: 0.68em;
+  color: #b8b0d0;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.card-mood {
+  font-size: 0.78em;
+  margin: 3px 0 6px;
+  font-weight: 600;
+}
+.card-mood.happy, .card-mood.playful { color: #FF8C42; }
+.card-mood.content, .card-mood.relaxed { color: #7B68EE; }
+.card-mood.sleepy { color: #FFD54F; }
+.card-mood.hungry { color: #FF8C42; }
+.card-mood.annoyed, .card-mood.scared { color: #ef5350; }
+.card-mood.curious { color: #4FC3F7; }
+
+/* Primary stat bars */
+.stat-row {
+  display: flex;
+  align-items: center;
+  margin: 3px 0;
+  position: relative;
+  cursor: help;
+}
+.stat-tooltip.active {
+  opacity: 1;
+}
+.stat-tooltip {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(30, 20, 70, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.72em;
+  color: #d0c8f0;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.stat-tooltip .tt-name { color: #fff; font-weight: 600; }
+.stat-tooltip .tt-val { color: #FF8C42; font-weight: 600; }
+.stat-icon { width: 18px; text-align: center; font-size: 0.72em; }
+.stat-label { width: 0; overflow: hidden; font-size: 0; }
+.stat-bar {
+  flex: 1;
+  height: 6px;
+  background: #1a1a3e;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-left: 2px;
+}
+.stat-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.stat-hunger .stat-fill { background: linear-gradient(90deg, #ef5350, #FF8C42); }
+.stat-energy .stat-fill { background: linear-gradient(90deg, #FFD54F, #66BB6A); }
+.stat-happiness .stat-fill { background: linear-gradient(90deg, #F48FB1, #ef5350); }
+.stat-hygiene .stat-fill { background: linear-gradient(90deg, #4FC3F7, #1565C0); }
+
+/* Detail stats (hidden by default) */
+.detail-stats {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.detail-stats.expanded {
+  max-height: 200px;
+}
+.stat-curiosity .stat-fill { background: linear-gradient(90deg, #4FC3F7, #0288D1); }
+.stat-bond .stat-fill { background: linear-gradient(90deg, #CE93D8, #e91e63); }
+.stat-stress .stat-fill { background: linear-gradient(90deg, #66BB6A, #f44336); }
+.stat-trust .stat-fill { background: linear-gradient(90deg, #B39DDB, #7C4DFF); }
+.stat-comfort .stat-fill { background: linear-gradient(90deg, #BCAAA4, #FFAB40); }
+.stat-bladder .stat-fill { background: linear-gradient(90deg, #4FC3F7, #0277BD); }
+
+.personality-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.personality-tag {
+  font-size: 0.58em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.1);
+  color: #b8b0d0;
+}
+
+.card-rel {
+  text-align: center;
+  font-size: 0.68em;
+  color: #7a70a0;
+  margin-top: 3px;
+}
+
+.details-toggle {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 3px 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  color: #b8b0d0;
+  font-size: 0.68em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.details-toggle:hover { background: rgba(255,255,255,0.14); }
+
+/* ===== ACTION BUTTONS ===== */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 4px auto 8px;
+  max-width: 480px;
+  width: 100%;
+}
+.action-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 50px;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  color: white;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+.btn:active { transform: translateY(0); }
+.btn.disabled { opacity: 0.3; pointer-events: none; }
+
+.btn-feed { background: linear-gradient(135deg, #FF8C42, #e65100); }
+.btn-pet { background: linear-gradient(135deg, #9C7CF4, #7B68EE); }
+.btn-play { background: linear-gradient(135deg, #4A90D9, #4169E1); }
+.btn-groom { background: linear-gradient(135deg, #26A69A, #00796B); }
+.btn-talk { background: linear-gradient(135deg, #7E57C2, #5E35B1); }
+.btn-wait { background: linear-gradient(135deg, #7E57C2, #5E35B1); }
+.btn-wake { background: linear-gradient(135deg, #FF8C42, #e65100); }
+.btn-clean { background: linear-gradient(135deg, #78909c, #546e7a); display: none; }
+.btn-autocare { background: linear-gradient(135deg, #43a047, #2e7d32); }
+.btn-autocare.active { background: linear-gradient(135deg, #e53935, #c62828); animation: autoPulse 2s ease infinite; }
+@keyframes autoPulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+  50% { box-shadow: 0 4px 20px rgba(229,57,53,0.5); }
+}
+
+/* ===== HINT ===== */
+.hint {
+  font-size: 0.72em;
+  color: #7a70a0;
+  margin-bottom: 6px;
+  text-align: center;
+  max-width: 480px;
+}
+
+/* ===== MAID CHARACTER ===== */
+.maid {
+  position: absolute;
+  z-index: 5;
+  right: 2%; bottom: -5px;
+  left: auto; top: auto;
+  opacity: 0; pointer-events: none;
+  transform: scale(0);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.maid.visible { opacity: 1; transform: scale(1); }
+.maid-sprite {
+  width: 100px;
+  height: auto;
+  pointer-events: none;
+}
+.maid-speech { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(100,80,180,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 3px 8px; font-size: 0.65em; white-space: nowrap; opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: 11; color: #e0d8f0; }
+.maid-speech.visible { opacity: 1; }
+.maid-speech::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top: 5px solid rgba(100,80,180,0.35); }
+
+/* ===== CARETAKER LOG ===== */
+.caretaker-panel {
+  max-width: 480px;
+  width: 100%;
+  margin: 4px auto 6px;
+}
+.caretaker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: rgba(100, 80, 180, 0.15);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.78em;
+  color: #b8b0d0;
+  user-select: none;
+  display: none;
+}
+.caretaker-header.visible { display: flex; }
+.caretaker-header .toggle-arrow { transition: transform 0.3s; }
+.caretaker-header.expanded .toggle-arrow { transform: rotate(180deg); }
+
+.autocare-log {
+  max-width: 480px; width: 100%;
+  background: rgba(100, 80, 180, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0 0 12px 12px;
+  padding: 6px 12px;
+  font-size: 0.72em;
+  color: #b8b0d0;
+  max-height: 80px;
+  overflow-y: auto;
+  display: none;
+  margin-top: -2px;
+}
+.autocare-log.visible { display: block; }
+.autocare-log div { padding: 1px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.autocare-log .log-time { color: #7a70a0; margin-right: 4px; }
+
+/* ===== SETTINGS PANEL ===== */
+.settings-panel {
+  max-width: 480px;
+  width: 100%;
+  margin: 6px auto;
+  background: rgba(100, 80, 180, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: none;
+}
+.settings-panel.visible { display: block; }
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.settings-row label {
+  white-space: nowrap;
+  font-weight: 600;
+  color: #b8b0d0;
+  font-size: 0.82em;
+  min-width: 56px;
+}
+.settings-row input[type="range"] {
+  flex: 1;
+  accent-color: #FF8C42;
+  height: 4px;
+}
+.speed-val {
+  font-weight: 700;
+  color: #FF8C42;
+  min-width: 28px;
+  text-align: center;
+  font-size: 0.85em;
+}
+
+.lang-switcher {
+  display: flex;
+  gap: 4px;
+}
+.lang-btn {
+  padding: 4px 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  font-size: 0.75em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  color: #b8b0d0;
+}
+.lang-btn:hover { background: rgba(255,255,255,0.15); }
+.lang-btn.active { background: #FF8C42; color: white; border-color: #FF8C42; }
+
+.settings-divider {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin: 10px 0;
+}
+
+.btn-rebirth-wrap {
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  margin-top: 10px;
+  font-size: 0.72em;
+  color: #5a5080;
+  text-align: center;
+}
+.footer a { color: #FF8C42; text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+/* ===== NAMING OVERLAY ===== */
+.naming-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15,14,46,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.naming-modal {
+  background: rgba(40, 35, 80, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.naming-modal h2 { margin-bottom: 16px; font-size: 1.2em; color: #FF8C42; }
+.naming-modal input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  font-size: 1em;
+  margin-bottom: 12px;
+  font-family: inherit;
+  outline: none;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  transition: border-color 0.2s;
+}
+.naming-modal input:focus { border-color: #FF8C42; }
+.naming-modal input::placeholder { color: #7a70a0; }
+.naming-modal .naming-label { font-size: 0.85em; color: #b8b0d0; margin-bottom: 4px; text-align: left; }
+.naming-modal button {
+  padding: 10px 28px;
+  border: none;
+  border-radius: 50px;
+  background: linear-gradient(135deg, #FF8C42, #e65100);
+  color: white;
+  font-size: 1em;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 8px;
+  font-weight: 600;
+}
+.naming-modal button:hover { opacity: 0.9; }
+
+.cat-tag-input {
+  position: absolute;
+  top: 0; left: 0;
+  transform: translateX(-50%);
+  font-size: 0.65em;
+  font-weight: 600;
+  padding: 1px 4px;
+  border: 2px solid #FF8C42;
+  border-radius: 8px;
+  width: 80px;
+  text-align: center;
+  z-index: 10;
+  outline: none;
+  font-family: inherit;
+  background: rgba(40,35,80,0.95);
+  color: white;
+}
+
+/* Mobile responsive */
+@media (max-width: 520px) {
+  body { padding: 8px; }
+  .app-header { padding: 8px 12px; }
+  .app-title { font-size: 1.1em; }
+  .room { height: 240px; }
+  .cards-row { gap: 6px; }
+  .cat-card { padding: 8px 8px 6px; }
+  .card-name { font-size: 0.82em; }
+  .card-stage { font-size: 0.6em; }
+  .cat-badge { width: 20px; height: 20px; font-size: 0.6em; }
+  .card-mood { font-size: 0.72em; }
+  .stat-icon { width: 14px; font-size: 0.6em; }
+  .stat-bar { height: 5px; }
+  .btn { padding: 8px 14px; font-size: 0.8em; }
+  .action-row { gap: 6px; }
+  .details-toggle { font-size: 0.62em; padding: 3px 10px; }
+  .hint { font-size: 0.72em; }
+}
+@media (max-width: 360px) {
+  .room { height: 200px; }
+  .cat-card { padding: 6px; }
+  .btn { padding: 7px 10px; font-size: 0.72em; }
+  .app-title { font-size: 1em; }
+}
+/* Touch: no hover tooltips on mobile, use tap instead */
+@media (hover: none) {
+  .stat-row { cursor: pointer; }
+  .stat-tooltip { font-size: 0.68em; }
+}
+</style>
+</head>
+<body>
+
+<div class="naming-overlay" id="naming-overlay" style="display:none">
+  <div class="naming-modal">
+    <h2>🐱 Name Your Cat!</h2>
+    <div class="naming-label" id="naming-label-0">Name your cat</div>
+    <input type="text" id="name-input-0" maxlength="20" placeholder="Cat">
+    <input type="hidden" id="name-input-1" value="">
+    <div id="naming-label-1" style="display:none"></div>
+    <br>
+    <button onclick="submitNames()">OK</button>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">🐱 Cat Brain</div>
+  <div class="header-right">
+    <span class="time-badge" id="time-badge">🌙 23:24</span>
+    <button class="music-btn" id="music-prev" onclick="prevTrack()" title="Previous">⏮</button>
+    <button class="music-btn" id="music-btn" onclick="toggleMusic()">▶️</button>
+    <button class="music-btn" id="music-next" onclick="nextTrack()" title="Next">⏭</button>
+    <button class="music-btn" id="music-mute" onclick="toggleMute()">🔊</button>
+    <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+  </div>
+</header>
+<audio id="bgm" preload="auto"></audio>
+
+<p class="hint" id="hint" style="display:none"></p>
+<p id="subtitle" style="display:none"></p>
+
+<!-- Room -->
+<div class="room" id="room">
+  <div class="room-deco" id="litter-box" style="left:12%;top:28%;display:none">🧻</div>
+
+  <!-- Cat 0 -->
+  <div class="room-cat selected" id="room-cat-0" onclick="selectCat(0)" style="left:30%;top:90%">
+    <div class="room-speech visible" id="speech-0"></div>
+    <img class="cat-sprite" id="sprite-0" src="sprites/cat_idle.apng">
+    <div class="cat-area">
+      <div class="cat content" id="cat-0">
+        <div class="zzz">💤</div>
+        <div class="cat-body">
+          <div class="ear ear-left"></div>
+          <div class="ear ear-right"></div>
+          <div class="eyes">
+            <div class="eye"><div class="pupil"></div></div>
+            <div class="eye"><div class="pupil"></div></div>
+          </div>
+          <div class="nose"></div>
+          <div class="mouth"></div>
+          <div class="whiskers">
+            <div class="whisker whisker-l1"></div>
+            <div class="whisker whisker-l2"></div>
+            <div class="whisker whisker-r1"></div>
+            <div class="whisker whisker-r2"></div>
+          </div>
+        </div>
+        <div class="tail"></div>
+        <div class="paws"><div class="paw"></div><div class="paw"></div></div>
+      </div>
+    </div>
+    <div class="cat-tag" onclick="event.stopPropagation(); startEditName(0)">Som</div>
+  </div>
+
+  <!-- Cat 1 (hidden — single cat mode) -->
+  <div class="room-cat gray" id="room-cat-1" style="display:none">
+    <div class="room-speech" id="speech-1"></div>
+    <img class="cat-sprite" id="sprite-1" src="sprites/cat_idle.apng">
+    <div class="cat-area"><div class="cat content" id="cat-1"></div></div>
+  </div>
+
+  <!-- Maid -->
+  <div class="maid" id="maid">
+    <div class="maid-speech" id="maid-speech"></div>
+    <img class="maid-sprite" id="maid-sprite" src="sprites/maid.apng">
+  </div>
+</div>
+
+<!-- Cat Stat Cards -->
+<div class="cards-row">
+  <!-- Card 0 -->
+  <div class="cat-card selected" id="stat-card-0" onclick="selectCat(0)">
+    <div class="card-header">
+      <div class="cat-badge" style="background:#ff9800">a</div>
+      <span class="card-name" id="cat-name-0">Som</span>
+      <span class="card-stage" id="age-badge-0">Kitten · Day 0</span>
+    </div>
+    <div class="card-mood content" id="mood-0">😌 Content</div>
+    <div class="stat-row stat-hunger"><span class="stat-icon">🍖</span><span class="stat-label" id="lbl-hunger-0">Hunger</span><div class="stat-bar"><div class="stat-fill" id="bar-hunger-0" style="width:30%"></div></div></div>
+    <div class="stat-row stat-energy"><span class="stat-icon">⚡</span><span class="stat-label" id="lbl-energy-0">Energy</span><div class="stat-bar"><div class="stat-fill" id="bar-energy-0" style="width:80%"></div></div></div>
+    <div class="stat-row stat-happiness"><span class="stat-icon">❤️</span><span class="stat-label" id="lbl-happiness-0">Happy</span><div class="stat-bar"><div class="stat-fill" id="bar-happiness-0" style="width:50%"></div></div></div>
+    <div class="stat-row stat-hygiene"><span class="stat-icon">💧</span><span class="stat-label" id="lbl-hygiene-0">Hygiene</span><div class="stat-bar"><div class="stat-fill" id="bar-hygiene-0" style="width:80%"></div></div></div>
+    <div class="detail-stats" id="details-0">
+      <div class="stat-row stat-curiosity"><span class="stat-icon">🔍</span><span class="stat-label" id="lbl-curiosity-0">Curious</span><div class="stat-bar"><div class="stat-fill" id="bar-curiosity-0" style="width:50%"></div></div></div>
+      <div class="stat-row stat-bond"><span class="stat-icon">❤️</span><span class="stat-label" id="lbl-bond-0">Bond</span><div class="stat-bar"><div class="stat-fill" id="bar-bond-0" style="width:10%"></div></div></div>
+      <div class="stat-row stat-stress"><span class="stat-icon">😰</span><span class="stat-label" id="lbl-stress-0">Stress</span><div class="stat-bar"><div class="stat-fill" id="bar-stress-0" style="width:10%"></div></div></div>
+      <div class="stat-row stat-trust"><span class="stat-icon">🤝</span><span class="stat-label" id="lbl-trust-0">Trust</span><div class="stat-bar"><div class="stat-fill" id="bar-trust-0" style="width:20%"></div></div></div>
+      <div class="stat-row stat-comfort"><span class="stat-icon">🛋️</span><span class="stat-label" id="lbl-comfort-0">Comfort</span><div class="stat-bar"><div class="stat-fill" id="bar-comfort-0" style="width:50%"></div></div></div>
+      <div class="stat-row stat-bladder"><span class="stat-icon">💧</span><span class="stat-label" id="lbl-bladder-0">Bladder</span><div class="stat-bar"><div class="stat-fill" id="bar-bladder-0" style="width:0%"></div></div></div>
+      <div class="personality-row" id="personality-0"></div>
+      <div class="card-rel" id="relationship-0">0 times</div>
+    </div>
+    <button class="details-toggle" onclick="event.stopPropagation(); toggleDetails(0)">Details ▼</button>
+  </div>
+
+  <!-- Card 1 (hidden — single cat mode) -->
+  <div class="cat-card" id="stat-card-1" style="display:none"></div>
+</div>
+
+<!-- Action Buttons -->
+<p class="hint" id="hint-display">💡 Use the buttons below to interact with your cat</p>
+
+<div class="actions">
+  <div class="action-row">
+    <button class="btn btn-feed" id="btn-feed" onclick="doAction('feed')">🍖 Feed</button>
+    <button class="btn btn-pet" id="btn-pet" onclick="doAction('pet')">🤚 Pet</button>
+    <button class="btn btn-play" id="btn-play" onclick="doAction('play')">🧶 Play</button>
+  </div>
+  <div class="action-row">
+    <button class="btn btn-groom" id="btn-groom" onclick="doAction('groom')">🪮 Groom</button>
+    <button class="btn btn-talk" id="btn-talk" onclick="doAction('talk')">💬 Talk</button>
+    <button class="btn btn-wait" id="btn-wait" onclick="doAction('wait')">👁️ Observe</button>
+  </div>
+  <div class="action-row">
+    <button class="btn btn-wake" id="btn-wake" onclick="doAction('wake')" style="display:none">⏰ Wake Up</button>
+    <button class="btn btn-clean" id="btn-clean" onclick="doAction('clean')" style="display:none">🧹 Clean</button>
+    <button class="btn btn-autocare" id="btn-autocare" onclick="toggleAutoCare()">🐱 Hire Caretaker</button>
+  </div>
+</div>
+
+<!-- Caretaker Log -->
+<div class="caretaker-panel">
+  <div class="caretaker-header" id="caretaker-header" onclick="toggleCaretakerLog()">
+    <span>🐱 Caretaker Log</span>
+    <span class="toggle-arrow">▼</span>
+  </div>
+  <div class="autocare-log" id="autocare-log"></div>
+</div>
+
+<!-- Settings Panel -->
+<div class="settings-panel" id="settings-panel">
+  <div class="settings-row">
+    <label id="speed-label">Speed</label>
+    <input type="range" id="speed-slider" min="1" max="20" value="1" oninput="onSpeedChange(this.value)">
+    <span class="speed-val" id="speed-val">1x</span>
+  </div>
+  <div class="settings-row">
+    <label>Lang</label>
+    <div class="lang-switcher">
+      <button class="lang-btn" onclick="setLang('th')">TH</button>
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('ko')">KO</button>
+    </div>
+  </div>
+  <hr class="settings-divider">
+  <div class="btn-rebirth-wrap">
+    <button class="btn" id="btn-rebirth" onclick="doRebirth()" style="background:linear-gradient(135deg,#ef5350,#c62828);font-size:0.8em;padding:8px 22px;">🔄 Rebirth</button>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  🧠 ML Brain (DQN) · <a href="https://github.com/sevenuphome/machinelearning" target="_blank">GitHub</a>
+</footer>
+
+<script>
+// ============================================================
+// CAT STATE (ported from src/cat_state.py)
+// ============================================================
+const TIME_PERIODS = {
+  dawn:      [5, 7],
+  morning:   [7, 12],
+  afternoon: [12, 16],
+  evening:   [16, 21],
+  night:     [21, 24],
+  late_night:[0, 5],
+};
+
+function getTimePeriod(hour) {
+  if (hour === null || hour === undefined) hour = new Date().getHours();
+  for (const [period, [start, end]] of Object.entries(TIME_PERIODS)) {
+    if (hour >= start && hour < end) return period;
+  }
+  return 'late_night';
+}
+
+class CatState {
+  constructor() {
+    this.hunger = 0.3;
+    this.energy = 0.8;
+    this.happiness = 0.5;
+    this.curiosity = 0.5;
+    this.bond_level = 0.1;
+    this.stress = 0.1;
+    this.trust = 0.2;
+    this.comfort = 0.5;
+    this.bladder = 0.0;
+    this.hygiene = 0.8;
+    this.boldness = 0.5;
+    this.affection = 0.5;
+    this.appetite = 0.5;
+    this.age_days = 0.0;
+    this.life_stage = 'kitten';
+    this._lastUpdate = Date.now() / 1000;
+    this._recentInteractions = 0;
+    this._interactionReset = Date.now() / 1000;
+    this.speedMultiplier = 1.0;
+    this.virtualHour = null;
+  }
+
+  get timePeriod() { return getTimePeriod(this.virtualHour); }
+
+  clamp(v) { return Math.max(0, Math.min(1, v)); }
+
+  _timeMultipliers() {
+    const p = this.timePeriod;
+    const m = {
+      morning:   { hunger: 1.5, energy: 0.5, curiosity: 1.8, happiness: 0.8 },
+      afternoon: { hunger: 1.0, energy: 2.0, curiosity: 0.5, happiness: 0.8 },
+      evening:   { hunger: 1.3, energy: 0.7, curiosity: 1.5, happiness: 0.3 },
+      night:     { hunger: 0.8, energy: 1.8, curiosity: 0.3, happiness: 1.0 },
+      late_night:{ hunger: 0.5, energy:-1.5, curiosity: 0.2, happiness: 0.5 },
+      dawn:      { hunger: 1.2, energy:-0.5, curiosity: 1.0, happiness: 0.7 },
+    };
+    return m[p] || { hunger: 1, energy: 1, curiosity: 1, happiness: 1 };
+  }
+
+  tick() {
+    const now = Date.now() / 1000;
+    const realElapsed = now - this._lastUpdate;
+    this.age_days += realElapsed / 86400.0;
+    if (this.age_days < 3) this.life_stage = 'kitten';
+    else if (this.age_days < 10) this.life_stage = 'adult';
+    else this.life_stage = 'senior';
+
+    const elapsed = (now - this._lastUpdate) * Math.max(1, Math.min(20, this.speedMultiplier));
+    this._lastUpdate = now;
+
+    if (now - this._interactionReset > 60) {
+      this._recentInteractions = 0;
+      this._interactionReset = now;
+    }
+
+    const HUNGER_RATE = 0.002, ENERGY_DECAY = 0.001, CURIOSITY_RATE = 0.0015;
+    const HAPPINESS_DECAY = 0.0005, BOND_DECAY = 0.0001;
+    const STRESS_DECAY = 0.0008, TRUST_DECAY = 0.00005, COMFORT_DECAY = 0.0003;
+
+    const m = this._timeMultipliers();
+
+    const hungerStage = this.life_stage === 'kitten' ? 1.3 : 1.0;
+    const energyStage = this.life_stage === 'kitten' ? 0.5 : (this.life_stage === 'senior' ? 1.3 : 1.0);
+    const curiosityStage = this.life_stage === 'kitten' ? 1.5 : 1.0;
+    const bladderStage = this.life_stage === 'kitten' ? 0.5 : 1.0;
+
+    this.hunger = this.clamp(this.hunger + HUNGER_RATE * elapsed * m.hunger * hungerStage);
+
+    if (m.energy < 0) {
+      this.energy = this.clamp(this.energy + ENERGY_DECAY * elapsed * Math.abs(m.energy));
+    } else {
+      this.energy = this.clamp(this.energy - ENERGY_DECAY * elapsed * m.energy * energyStage);
+    }
+
+    const period = this.timePeriod;
+    if (this.energy < 0.25 && (period === 'dawn' || period === 'morning' || period === 'evening')) {
+      const wakeBoost = { dawn: 0.008, morning: 0.012, evening: 0.010 };
+      this.energy = this.clamp(this.energy + wakeBoost[period] * elapsed);
+    }
+
+    this.curiosity = this.clamp(this.curiosity + CURIOSITY_RATE * elapsed * m.curiosity * curiosityStage);
+    this.happiness = this.clamp(this.happiness - HAPPINESS_DECAY * elapsed * m.happiness);
+    this.bond_level = this.clamp(this.bond_level - BOND_DECAY * elapsed);
+    this.stress = this.clamp(this.stress - STRESS_DECAY * elapsed);
+    this.trust = this.clamp(this.trust - TRUST_DECAY * elapsed);
+
+    const comfortTarget = 0.5 - this.stress * 0.3;
+    this.comfort = this.clamp(this.comfort + (comfortTarget - this.comfort) * 0.001 * elapsed);
+
+    const BLADDER_RATE = 0.0012;
+    this.bladder = this.clamp(this.bladder + BLADDER_RATE * elapsed * bladderStage);
+
+    const HYGIENE_DECAY = 0.0006;
+    this.hygiene = this.clamp(this.hygiene - HYGIENE_DECAY * elapsed);
+    if (this.life_stage !== 'kitten' && (this.mood === 'content' || this.mood === 'relaxed') && this.hygiene < 0.5) {
+      const groomRate = this.life_stage === 'senior' ? 0.00015 : 0.0003;
+      this.hygiene = this.clamp(this.hygiene + groomRate * elapsed);
+    }
+    if (this.hygiene < 0.3) {
+      this.happiness = this.clamp(this.happiness - 0.001 * elapsed);
+      this.comfort = this.clamp(this.comfort - 0.001 * elapsed);
+    }
+
+    if (this.hunger > 0.7) this.happiness = this.clamp(this.happiness - 0.001 * elapsed);
+    if (this.energy < 0.2) this.happiness = this.clamp(this.happiness - 0.001 * elapsed);
+    if (this.stress > 0.6) {
+      this.happiness = this.clamp(this.happiness - 0.0008 * elapsed);
+      this.energy = this.clamp(this.energy - 0.0005 * elapsed);
+    }
+  }
+
+  applyAction(action) {
+    this._recentInteractions++;
+    const effects = {
+      feed: { hunger: -0.4, happiness: 0.1, bond_level: 0.05, trust: 0.03, stress: -0.05 },
+      pet:  { happiness: 0.2, bond_level: 0.08, energy: -0.02, comfort: 0.15, stress: -0.1 },
+      play: { happiness: 0.3, energy: -0.15, curiosity: -0.2, bond_level: 0.1, stress: -0.05 },
+      talk: { happiness: 0.05, bond_level: 0.03, curiosity: 0.05, trust: 0.02, comfort: 0.05 },
+      sleep:{ energy: 0.5, hunger: 0.1, stress: -0.2, comfort: 0.2 },
+      explore:{ curiosity: -0.3, energy: -0.1, happiness: 0.1, comfort: -0.1 },
+      wake:   { energy: 0.3, stress: 0.1, happiness: -0.05, comfort: -0.1 },
+      groom:  { hygiene: 0.4, comfort: 0.15, happiness: 0.1, stress: -0.05 },
+    };
+    if (!effects[action]) return;
+
+    if (this._recentInteractions > 4) {
+      const overpet = (this._recentInteractions - 4) * 0.08 * (1.0 - this.affection);
+      this.stress = this.clamp(this.stress + overpet);
+    }
+
+    for (const [attr, delta_orig] of Object.entries(effects[action])) {
+      let delta = delta_orig;
+      const noise = (Math.random() - 0.5) * 0.06;
+
+      if (action === 'feed' && attr === 'hunger') delta *= (0.7 + this.appetite * 0.6);
+      else if (action === 'pet' && (attr === 'happiness' || attr === 'comfort')) delta *= (0.5 + this.affection);
+      else if (action === 'pet' && attr === 'stress' && this.trust < 0.3) delta = 0.1;
+      else if (action === 'play' && attr === 'happiness') delta *= (0.6 + this.boldness * 0.8);
+
+      this[attr] = this.clamp(this[attr] + delta + noise);
+    }
+
+    if (['feed','pet','play','talk'].includes(action) && this.stress < 0.4) {
+      this.trust = this.clamp(this.trust + 0.01);
+    }
+
+    const driftMult = this.life_stage === 'kitten' ? 1.0 : (this.life_stage === 'adult' ? 0.1 : 0.0);
+    if (driftMult > 0) {
+      const driftMap = {
+        play: { boldness: 0.005, affection: 0.003 },
+        pet: { affection: 0.008 },
+        talk: { affection: 0.003, boldness: 0.002 },
+        feed: { appetite: 0.005 },
+      };
+      if (driftMap[action]) {
+        for (const [trait, amount] of Object.entries(driftMap[action])) {
+          this[trait] = this.clamp(this[trait] + amount * driftMult);
+        }
+      }
+      if (this.stress > 0.5) {
+        this.boldness = this.clamp(this.boldness - 0.005 * driftMult);
+      }
+    }
+  }
+
+  get mood() {
+    if (this.stress > 0.7) return 'scared';
+    if (this.stress > 0.5 && this.trust < 0.3) return 'annoyed';
+    const sleepyThreshold = this.life_stage === 'kitten' ? 0.1 : (this.life_stage === 'senior' ? 0.25 : 0.15);
+    if (this.energy < sleepyThreshold) return 'sleepy';
+    if (this.hunger > 0.7) return 'hungry';
+    if (this.happiness < 0.2) return 'annoyed';
+    if (this.comfort > 0.7 && this.stress < 0.2) return 'relaxed';
+    if (this.curiosity > 0.7 && this.boldness > 0.4) return 'curious';
+    if (this.happiness > 0.7 && this.energy > 0.5) return 'playful';
+    if (this.happiness > 0.5) return 'happy';
+    return 'content';
+  }
+
+  toJSON() {
+    return {
+      hunger: this.hunger, energy: this.energy, happiness: this.happiness,
+      curiosity: this.curiosity, bond: this.bond_level, stress: this.stress,
+      trust: this.trust, comfort: this.comfort, bladder: this.bladder, hygiene: this.hygiene,
+      age_days: this.age_days, life_stage: this.life_stage,
+    };
+  }
+}
+
+// ============================================================
+// CAT MEMORY (ported from src/memory.py)
+// ============================================================
+class CatMemory {
+  constructor() {
+    this.history = [];
+    this.totalInteractions = 0;
+    this.lastInteractionTime = null;
+  }
+
+  record(action, mood, wasPositive) {
+    this.history.push({ action, mood, wasPositive, time: Date.now() });
+    this.totalInteractions++;
+    this.lastInteractionTime = Date.now();
+    if (this.history.length > 100) this.history = this.history.slice(-100);
+  }
+
+  get recentPositiveRatio() {
+    const recent = this.history.slice(-20);
+    if (!recent.length) return 0.5;
+    return recent.filter(i => i.wasPositive).length / recent.length;
+  }
+
+  get neglectLevel() {
+    if (!this.lastInteractionTime) return 0.5;
+    const gap = (Date.now() - this.lastInteractionTime) / 1000;
+    return Math.min(1, gap / 300);
+  }
+}
+
+// ============================================================
+// BRAIN (ported from src/brain.py)
+// ============================================================
+const ACTION_TEXT = {
+  th: {
+    purr: ["แมวครางเบา ๆ อย่างมีความสุข... prrrr~", "แมวหลับตาแล้วครางเสียงดัง นี่มันพอใจมาก", "เสียงครางเบา ๆ ดังขึ้นจากลำคอ... แมวดูผ่อนคลาย"],
+    meow: ["เมี้ยว~! แมวร้องเรียกความสนใจ", "แมวเดินมาเสียดสีขาพร้อมร้อง เมี้ยว!", "เมี้ยววว... แมวนั่งจ้องด้วยตาโต"],
+    hiss: ["ฟืดดด! แมวขู่แล้วเดินหนีไป", "แมวหูแนบหัว ดวงตาเหลือบมอง... อย่ามายุ่ง", "แมวสะบัดหางแรง ๆ แล้วเดินจากไป"],
+    nap: ["แมวม้วนตัวเป็นก้อนกลม ๆ แล้วหลับไป... zzz", "แมวหาวยาว แล้วหลับตาลง... นอนเลย", "แมวเดินไปนอนในที่อุ่น ๆ แล้วนอนหลับสนิท"],
+    play_alone: ["แมวกระโดดไล่จับอะไรบางอย่างที่มองไม่เห็น!", "แมวตบลูกบอลไปมาอย่างสนุกสนาน", "แมวกระโดดตัวลอย! เล่นกับเงาตัวเอง"],
+    explore: ["แมวเดินสำรวจรอบ ๆ อย่างระมัดระวัง...", "แมวดมนู่นดมนี่ หูตั้งชัน สนใจทุกอย่าง", "แมวกระโดดขึ้นที่สูงเพื่อสำรวจ มองลงมาอย่างภาคภูมิ"],
+    eat: ["แมวเดินไปที่ชามอาหารแล้วกินอย่างเอร็ดอร่อย", "มุบมิบ มุบมิบ... แมวกินข้าวอย่างตั้งใจ", "แมวเลียปากหลังกินอิ่ม แล้วนั่งเลียขน"],
+    ignore: ["... แมวเมินไปเลย ไม่สนใจแม้แต่นิดเดียว", "แมวหันหลังให้ แกล้งทำเป็นไม่เห็น", "แมวนั่งเลียขนอย่างไม่แยแส ราวกับไม่มีใครอยู่"],
+    rub: ["แมวเดินมาเสียดสีที่ขา แสดงความรัก~", "แมวเอาหัวมาดุนมือ... อยากให้ลูบ", "แมวนอนหงายท้องให้! ...แต่อาจเป็นกับดักนะ"],
+    stare: ["แมวนั่งจ้องนิ่ง ๆ... ดวงตากลมโตไม่กะพริบ", "แมวมองจากมุมห้อง ใครจะรู้ว่าคิดอะไร...", "แมวเอียงหัว จ้องมองอย่างสงสัย..."],
+    use_litter: ["แมวเดินไปใช้กระบะทราย...", "แมวขุดทรายแล้วนั่งลง..."],
+    groom_self: ["แมวนั่งเลียขนตัวเอง...", "แมวทำความสะอาดตัวเองอย่างขยัน"],
+  },
+  en: {
+    purr: ["Cat purrs softly with happiness... prrrr~", "Cat closes its eyes and purrs loudly. So content!", "A gentle purr rises from the throat... cat looks relaxed"],
+    meow: ["Meow~! Cat calls for attention", "Cat rubs against your leg, meowing!", "Meooow... cat stares at you with big eyes"],
+    hiss: ["Hssss! Cat hisses and walks away", "Cat flattens its ears, glaring... don't bother me", "Cat flicks its tail hard and walks off"],
+    nap: ["Cat curls into a fluffy ball and falls asleep... zzz", "Cat yawns wide and closes its eyes... naptime", "Cat finds a warm spot and falls fast asleep"],
+    play_alone: ["Cat pounces at something invisible!", "Cat bats a ball around playfully", "Cat leaps into the air! Playing with its own shadow"],
+    explore: ["Cat cautiously explores around...", "Cat sniffs everything, ears perked, curious about it all", "Cat jumps up high to survey the room, looking proud"],
+    eat: ["Cat walks to the food bowl and eats happily", "Munch munch... cat eats with full focus", "Cat licks its lips after eating, then grooms itself"],
+    ignore: ["... Cat completely ignores you. Not even a glance", "Cat turns its back, pretending you don't exist", "Cat grooms itself nonchalantly, as if no one is around"],
+    rub: ["Cat rubs against your leg affectionately~", "Cat headbutts your hand... wants pets", "Cat rolls over showing belly! ...might be a trap though"],
+    stare: ["Cat sits and stares... big round eyes, unblinking", "Cat watches from the corner. Who knows what it's thinking...", "Cat tilts its head, staring curiously..."],
+    use_litter: ["Cat walks to the litter box...", "Cat digs in the litter and sits down..."],
+    groom_self: ["Cat sits and grooms itself...", "Cat diligently cleans its fur"],
+  },
+  ko: {
+    purr: ["고양이가 행복하게 그르릉... prrrr~", "고양이가 눈을 감고 크게 그르릉. 만족스러워!", "목에서 부드러운 그르릉 소리가... 편안해 보여"],
+    meow: ["냐옹~! 관심을 달라고 울어요", "고양이가 다리에 비비며 냐옹!", "냐오옹... 큰 눈으로 쳐다봐요"],
+    hiss: ["하악! 고양이가 으르렁하며 도망가요", "귀를 납작하게... 건드리지 마", "꼬리를 세차게 흔들며 떠나요"],
+    nap: ["고양이가 동글게 말려서 잠들었어요... zzz", "하품하고 눈을 감아요... 자는 시간", "따뜻한 곳에서 깊이 잠들었어요"],
+    play_alone: ["보이지 않는 것에 덤벼요!", "공을 이리저리 굴리며 놀아요", "공중으로 점프! 자기 그림자와 놀아요"],
+    explore: ["조심스럽게 주변을 탐색해요...", "여기저기 킁킁, 귀를 세우고 호기심 가득", "높은 곳에 올라 자랑스럽게 내려다봐요"],
+    eat: ["밥그릇으로 가서 맛있게 먹어요", "냠냠... 집중해서 먹어요", "입맛을 다시며 그루밍 시작"],
+    ignore: ["... 완전히 무시해요. 눈길도 안 줘요", "등을 돌려요. 없는 척", "태연하게 그루밍... 아무도 없는 것처럼"],
+    rub: ["다리에 살살 비벼요~", "머리로 손을 쿡쿡... 쓰다듬어 달라고", "배를 보여줘요! ...함정일 수도 있어요"],
+    stare: ["가만히 앉아서 쳐다봐요... 큰 눈, 깜빡이지 않아요", "구석에서 지켜봐요. 무슨 생각인지...", "고개를 갸우뚱, 궁금한 듯 쳐다봐요..."],
+    use_litter: ["고양이가 화장실로 걸어가요...", "고양이가 모래를 파고 앉아요..."],
+    groom_self: ["고양이가 앉아서 그루밍해요...", "고양이가 부지런히 털을 정리해요"],
+  },
+};
+
+const CAT_REACTION_TEXT = {
+  th: {
+    purr: ["{name} ก็ครางตาม... prrrr~", "{name} หลับตาแล้วครางเบา ๆ ด้วย"],
+    rub: ["{name} เดินมาเสียดสีอีกตัว", "{name} เอาหัวมาดุนเพื่อน"],
+    play_alone: ["{name} กระโดดเข้าร่วมเล่นด้วย!", "{name} ไล่ตบอีกตัวเล่น!"],
+    meow: ["{name} ร้องตอบ เมี้ยว~!", "{name} ร้องตาม เหมือนคุยกัน"],
+    hiss: ["{name} ขู่กลับ ฟืดดด!", "{name} ขนพอง ไม่พอใจ!"],
+    nap: ["{name} ม้วนตัวนอนตาม... zzz", "{name} นอนต่อ ไม่สนใจ"],
+    stare: ["{name} จ้องมองอีกตัวนิ่ง ๆ...", "{name} เอียงหัวดู"],
+    ignore: ["{name} เมินไปเลย ไม่แยแส", "{name} เดินจากไป"],
+    explore: ["{name} เดินไปดมดู อยากรู้อยากเห็น", "{name} แอบไปสำรวจต่อ"],
+    eat: ["{name} แย่งไปกินด้วย!", "{name} วิ่งมาที่ชามอาหาร!"],
+  },
+  en: {
+    purr: ["{name} purrs along... prrrr~", "{name} closes eyes and purrs softly too"],
+    rub: ["{name} rubs against the other cat", "{name} headbutts their friend"],
+    play_alone: ["{name} jumps in to play too!", "{name} swats at the other playfully!"],
+    meow: ["{name} meows back~!", "{name} meows along, like chatting"],
+    hiss: ["{name} hisses back! Hssss!", "{name} puffs up, not happy!"],
+    nap: ["{name} curls up to nap too... zzz", "{name} keeps sleeping, unbothered"],
+    stare: ["{name} stares at the other cat quietly...", "{name} tilts head watching"],
+    ignore: ["{name} ignores it completely", "{name} walks away"],
+    explore: ["{name} goes to sniff around curiously", "{name} sneaks off to explore"],
+    eat: ["{name} rushes to eat too!", "{name} runs to the food bowl!"],
+  },
+  ko: {
+    purr: ["{name}도 따라서 그르릉... prrrr~", "{name}이 눈을 감고 같이 그르릉"],
+    rub: ["{name}이 다른 고양이에게 비벼요", "{name}이 친구에게 머리를 쿡쿡"],
+    play_alone: ["{name}도 같이 놀아요!", "{name}이 장난스럽게 때려요!"],
+    meow: ["{name}이 냐옹하고 대답해요~!", "{name}이 따라 울어요, 대화하는 것처럼"],
+    hiss: ["{name}이 하악하고 대응해요!", "{name}이 털을 세워요, 화났어!"],
+    nap: ["{name}도 같이 잠들어요... zzz", "{name}은 계속 자요, 신경 안 써"],
+    stare: ["{name}이 다른 고양이를 가만히 쳐다봐요...", "{name}이 고개를 갸우뚱"],
+    ignore: ["{name}이 완전히 무시해요", "{name}이 걸어가 버려요"],
+    explore: ["{name}이 호기심에 킁킁거려요", "{name}이 몰래 탐색하러 가요"],
+    eat: ["{name}도 먹으러 달려가요!", "{name}이 밥그릇으로 달려요!"],
+  },
+};
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+class RuleBrain {
+  decideResponse(state, memory, userAction) {
+    if (userAction && this._shouldIgnore(state, memory)) return 'ignore';
+    if (userAction) return this._respondToAction(state, memory, userAction);
+    return this._autonomousAction(state, memory);
+  }
+
+  _shouldIgnore(state, memory) {
+    let chance = 0.15;
+    if (state.mood === 'annoyed' || state.mood === 'scared') chance += 0.3;
+    if (state.mood === 'sleepy') chance += 0.2;
+    if (state.bond_level > 0.6) chance -= 0.1;
+    if (state.bond_level < 0.2) chance += 0.15;
+    chance += (1.0 - state.affection) * 0.15;
+    if (state.stress > 0.5) chance += 0.25;
+    if (state.trust < 0.3) chance += 0.2;
+    return Math.random() < chance;
+  }
+
+  _respondToAction(state, memory, action) {
+    if (state.mood === 'scared') return pick(['hiss', 'ignore', 'ignore']);
+    if (state.mood === 'sleepy') {
+      if (action === 'pet' && state.trust > 0.4) return pick(['purr', 'ignore', 'ignore']);
+      if (action === 'feed' && state.hunger > 0.8) return 'eat';
+      return pick(['ignore', 'nap', 'stare']);
+    }
+    if (action === 'feed') {
+      if (state.hunger > 0.5) return state.trust < 0.2 ? 'stare' : 'eat';
+      if (state.hunger > 0.3 && state.appetite > 0.6) return 'eat';
+      return pick(['stare', 'ignore']);
+    }
+    if (action === 'pet') {
+      if (state.stress > 0.6 || state.trust < 0.2) return 'hiss';
+      if (['happy','playful','content','relaxed'].includes(state.mood)) {
+        if (state.affection > 0.5) return 'purr';
+        return state.bond_level > 0.3 ? 'rub' : 'stare';
+      }
+      if (state.mood === 'annoyed') return 'hiss';
+      return 'stare';
+    }
+    if (action === 'play') {
+      if (state.stress > 0.5) return pick(['ignore', 'stare']);
+      if (state.energy > 0.3 && ['playful','curious','happy'].includes(state.mood)) return 'play_alone';
+      if (state.energy < 0.2) return 'nap';
+      if (state.boldness > 0.6 && state.energy > 0.2) return 'play_alone';
+      return pick(['stare', 'ignore']);
+    }
+    if (action === 'talk') {
+      if (state.bond_level > 0.4 && state.trust > 0.3) return 'meow';
+      if (state.affection > 0.7) return 'meow';
+      return pick(['stare', 'ignore']);
+    }
+    if (action === 'wake') {
+      if (state.mood === 'sleepy') return pick(['hiss', 'stare', 'stare', 'meow']);
+      return 'stare';
+    }
+    if (action === 'groom') {
+      if (state.trust < 0.3) return 'hiss';
+      return pick(['purr', 'rub']);
+    }
+    return 'stare';
+  }
+
+  _autonomousAction(state, memory) {
+    if (state.bladder > 0.8) return 'use_litter';
+    if (state.hygiene < 0.4 && (state.mood === 'content' || state.mood === 'relaxed')) {
+      if (Math.random() < 0.4) return 'groom_self';
+    }
+    if (state.stress > 0.7) return pick(['hiss', 'ignore', 'ignore']);
+    if (state.stress > 0.5) {
+      if (state.boldness < 0.4) return pick(['ignore', 'nap', 'stare']);
+      return pick(['stare', 'explore']);
+    }
+    if (state.hunger > 0.8) return 'meow';
+    const period = state.timePeriod;
+    if (state.energy < 0.15) {
+      if ((period === 'morning' || period === 'evening') && state.energy >= 0.1) {
+      } else {
+        return 'nap';
+      }
+    }
+    if (state.comfort < 0.3) return pick(['nap', 'meow', 'explore']);
+    if (period === 'late_night') return pick(['nap', 'nap', 'stare']);
+    if (period === 'night') return pick(['nap', 'nap', 'stare', 'explore']);
+    if (period === 'dawn') return pick(['stare', 'meow', 'explore']);
+    if (period === 'afternoon') {
+      if (state.energy < 0.5) return 'nap';
+      return pick(['nap', 'stare', 'explore']);
+    }
+    if (state.mood === 'curious' && state.energy > 0.3) return 'explore';
+    if (state.mood === 'playful' && state.energy > 0.4) return 'play_alone';
+    if ((state.mood === 'happy' || state.mood === 'relaxed') && state.bond_level > 0.5 && state.trust > 0.4)
+      return pick(['purr', 'rub']);
+    if (period === 'evening' && state.energy > 0.3)
+      return pick(['play_alone', 'explore', 'meow']);
+    if (memory.neglectLevel > 0.7 && state.bond_level > 0.3) return 'meow';
+    if (state.boldness > 0.6) return pick(['explore', 'play_alone', 'stare']);
+    if (state.affection > 0.6) return pick(['meow', 'rub', 'purr']);
+    return pick(['stare', 'nap', 'explore', 'play_alone']);
+  }
+
+  getActionText(action, lang) {
+    const lt = ACTION_TEXT[lang] || ACTION_TEXT.en;
+    return pick(lt[action] || [`Cat does ${action}...`]);
+  }
+
+  getReactionText(action, catName, lang) {
+    const lt = CAT_REACTION_TEXT[lang] || CAT_REACTION_TEXT.en;
+    return pick(lt[action] || [`${catName} stares...`]).replace('{name}', catName);
+  }
+
+  wasPositiveInteraction(state, catAction) {
+    if (['purr','rub','play_alone','eat','meow'].includes(catAction)) return true;
+    if (['hiss','ignore'].includes(catAction)) return false;
+    return state.happiness > 0.4;
+  }
+
+  decideCatReaction(reactorState, actorAction) {
+    if (reactorState.mood === 'sleepy') {
+      if (actorAction === 'meow' || actorAction === 'play_alone') return pick(['stare','hiss']);
+      return 'nap';
+    }
+    if (reactorState.mood === 'annoyed') return pick(['hiss','ignore','stare']);
+    if (actorAction === 'play_alone') {
+      if (['playful','curious','happy'].includes(reactorState.mood) && reactorState.energy > 0.3)
+        return pick(['play_alone','play_alone','explore']);
+      return pick(['stare','ignore']);
+    }
+    if (actorAction === 'purr') {
+      if (reactorState.happiness > 0.4) return pick(['purr','rub','nap']);
+      return 'stare';
+    }
+    if (actorAction === 'meow') {
+      if (reactorState.mood === 'happy' || reactorState.mood === 'curious') return pick(['meow','stare']);
+      return pick(['stare','ignore']);
+    }
+    if (actorAction === 'hiss') return pick(['hiss','ignore','stare']);
+    if (actorAction === 'eat') {
+      if (reactorState.hunger > 0.5) return pick(['meow','stare']);
+      return 'stare';
+    }
+    if (actorAction === 'rub') {
+      if (reactorState.happiness > 0.3) return pick(['rub','purr','stare']);
+      return 'stare';
+    }
+    return pick(['stare','ignore','explore']);
+  }
+}
+
+// ============================================================
+// POSITION UPDATE (ported from web.py)
+// ============================================================
+// Walkable zone: y 83%-97%, x 3%-96% (from reference image black zone)
+const FOOD_POS = [10, 90], BED_POS = [75, 88], OWNER_POS = [50, 92], LITTER_POS = [10, 92];
+
+function updatePosition(pos, action, otherPos) {
+  let [x, y] = pos;
+  const [ox, oy] = otherPos;
+  const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+
+  if (action === 'eat') { x = FOOD_POS[0] + ri(-3,3); y = FOOD_POS[1] + ri(-3,3); }
+  else if (action === 'use_litter') { x = LITTER_POS[0] + ri(-3,3); y = LITTER_POS[1] + ri(-3,3); }
+  else if (action === 'groom_self') { x += ri(-3,3); y += ri(-3,3); }
+  else if (action === 'nap') { x = BED_POS[0] + ri(-5,5); y = BED_POS[1] + ri(-5,5); }
+  else if (action === 'rub' || action === 'meow') { x = OWNER_POS[0] + ri(-8,8); y = OWNER_POS[1] + ri(-5,3); }
+  else if (action === 'hiss') { x += (x >= ox ? 1 : -1) * ri(10,20); }
+  else if (action === 'explore') { x = ri(5,90); y = ri(84,95); }
+  else if (action === 'play_alone') {
+    const mx = (x + ox) >> 1, my = (y + oy) >> 1;
+    x = mx + ri(-10,10); y = my + ri(-10,10);
+  }
+  else if (action === 'purr') { x += ri(-3,3); y += ri(-3,3); }
+  else if (action === 'ignore') { x += (x >= ox ? 1 : -1) * ri(5,15); }
+
+  return [Math.max(3, Math.min(90, x)), Math.max(83, Math.min(97, y))];
+}
+
+// ============================================================
+// GAME ENGINE (client-side, no server)
+// ============================================================
+const brain = new RuleBrain();
+const TIME_SCALE = 1;
+let litterDirty = 0;
+
+const gameCats = [
+  { state: new CatState(), memory: new CatMemory(), pos: [30, 90] },
+  { state: new CatState(), memory: new CatMemory(), pos: [70, 90] },
+];
+gameCats[0].state.boldness = 0.8;
+gameCats[0].state.affection = 0.9;
+gameCats[0].state.appetite = 0.7;
+gameCats[1].state.curiosity = 0.7;
+gameCats[1].state.energy = 0.6;
+gameCats[1].state.happiness = 0.6;
+gameCats[1].state.boldness = 0.3;
+gameCats[1].state.affection = 0.4;
+gameCats[1].state.appetite = 0.3;
+
+let virtualStartReal = Date.now() / 1000;
+let virtualStartHour = new Date().getHours() + new Date().getMinutes() / 60;
+
+function getVirtualHour() {
+  const speed = currentSpeed;
+  const elapsed = Date.now() / 1000 - virtualStartReal;
+  const virtualHours = (elapsed * speed * TIME_SCALE) / 3600;
+  return (virtualStartHour + virtualHours) % 24;
+}
+
+function processAction(action) {
+  const vh = Math.floor(getVirtualHour());
+  const cat = gameCats[0];
+  cat.state.speedMultiplier = currentSpeed;
+  cat.state.virtualHour = vh;
+  cat.state.tick();
+
+  const catActions = ['', ''];
+  const texts = ['', ''];
+
+  if (action === 'wait') {
+    const primary = brain.decideResponse(cat.state, cat.memory, null);
+    if (primary === 'use_litter') { cat.state.bladder = 0; litterDirty++; }
+    else if (primary === 'groom_self') { cat.state.hygiene = cat.state.clamp(cat.state.hygiene + 0.3); }
+    catActions[0] = primary;
+    texts[0] = brain.getActionText(primary, currentLang);
+  } else if (action === 'clean') {
+    litterDirty = 0;
+    catActions[0] = 'stare';
+  } else if (['feed','pet','play','talk','wake','groom'].includes(action)) {
+    const catAction = brain.decideResponse(cat.state, cat.memory, action);
+    const wasPositive = brain.wasPositiveInteraction(cat.state, catAction);
+    cat.state.applyAction(action);
+    cat.memory.record(action, cat.state.mood, wasPositive);
+    if (wasPositive) cat.state.bond_level = cat.state.clamp(cat.state.bond_level + 0.02);
+    else cat.state.bond_level = cat.state.clamp(cat.state.bond_level - 0.01);
+
+    catActions[0] = catAction;
+    texts[0] = brain.getActionText(catAction, currentLang);
+  }
+
+  if (catActions[0]) {
+    cat.pos = updatePosition(cat.pos, catActions[0], [50, 50]);
+  }
+
+  return buildResponse(catActions, texts);
+}
+
+function buildResponse(catActions, texts) {
+  catActions = catActions || ['', ''];
+  texts = texts || ['', ''];
+  // Single cat mode — only include cat 0
+  const c = gameCats[0];
+  const cats = [{
+    id: 0,
+    cat_action: catActions[0],
+    text: texts[0],
+    mood: c.state.mood,
+    pos: c.pos,
+    state: c.state.toJSON(),
+    personality: { boldness: round2(c.state.boldness), affection: round2(c.state.affection), appetite: round2(c.state.appetite) },
+    relationship: { total: c.memory.totalInteractions, positivity: round2(c.memory.recentPositiveRatio) },
+    age_days: round2(c.state.age_days),
+    life_stage: c.state.life_stage,
+  }];
+
+  const vh = getVirtualHour();
+  const hour = Math.floor(vh);
+  const minute = Math.floor((vh - hour) * 60);
+  const period = getTimePeriod(hour);
+  return { cats, time_period: period, hour, minute, litter_dirty: litterDirty };
+}
+
+function round2(v) { return Math.round(v * 100) / 100; }
+
+function getDisplayName(i) { return catNames[i] || t().catNames[i]; }
+
+function tickAndRefresh() {
+  const vh = Math.floor(getVirtualHour());
+  for (const c of gameCats) {
+    c.state.speedMultiplier = currentSpeed;
+    c.state.virtualHour = vh;
+    c.state.tick();
+  }
+
+  // Autonomous action — single cat mode (cat 0 only)
+  const catActions = ['', ''];
+  const texts = ['', ''];
+  const action = brain.decideResponse(gameCats[0].state, gameCats[0].memory, null);
+  catActions[0] = action;
+  texts[0] = brain.getActionText(action, currentLang);
+  if (action === 'use_litter') { gameCats[0].state.bladder = 0; litterDirty++; }
+  else if (action === 'groom_self') { gameCats[0].state.hygiene = gameCats[0].state.clamp(gameCats[0].state.hygiene + 0.3); }
+  gameCats[0].pos = updatePosition(gameCats[0].pos, action, [50, 50]);
+
+  // Show speech bubble occasionally
+  if (Math.random() < 0.3 && texts[0]) {
+    showSpeech(0, texts[0]);
+  }
+
+  updateUI(buildResponse(catActions, texts));
+}
+
+// ============================================================
+// UI CODE
+// ============================================================
+const CACHE_VERSION = 4;
+let selectedCat = 0;
+let catMoods = ['content', 'content'];
+let catPositions = [[30, 55], [70, 45]];
+let speechTimers = [null, null];
+let currentLang = localStorage.getItem('catLang') || 'en';
+let currentSpeed = parseInt(localStorage.getItem('catSpeed')) || 1;
+let catNames = [null, null];
+let busy = false;
+let prevTraits = [{}, {}];
+
+const I18N = {
+  th: {
+    subtitle: 'สัตว์เลี้ยงเสมือนที่มีสมอง — ขับเคลื่อนด้วย ML',
+    catNames: ['ส้ม', 'เทา'],
+    greetings: ['สวัสดี~ ฉันชื่อส้ม!', 'เมี้ยว~ ฉันชื่อเทา!'],
+    stats: { hunger: 'หิว', energy: 'พลัง', happiness: 'สุข', curiosity: 'สนใจ', bond: 'ผูกพัน', stress: 'เครียด', trust: 'ไว้ใจ', comfort: 'สบาย', bladder: 'กระเพาะ', hygiene: 'สะอาด' },
+    statTips: { hunger: 'ความหิว — สูง = ต้องให้อาหาร', energy: 'พลังงาน — ต่ำ = ง่วงนอน', happiness: 'ความสุข — สูง = อารมณ์ดี', curiosity: 'ความอยากรู้ — สูง = ชอบสำรวจ', bond: 'ความผูกพัน — สูงขึ้นเมื่อเล่นด้วย', stress: 'ความเครียด — สูง = หงุดหงิด/กลัว', trust: 'ความไว้ใจ — สูงขึ้นจากการดูแลดี', comfort: 'ความสบาย — ลดลงเมื่อเครียด', bladder: 'กระเพาะปัสสาวะ — เต็ม = ต้องใช้กระบะทราย', hygiene: 'ความสะอาด — ต่ำ = ต้องแปรงขน' },
+    buttons: { feed: '🍖 ให้อาหาร', pet: '🤚 ลูบหัว', groom: '🪮 แปรงขน', play: '🧶 เล่นด้วย', talk: '💬 พูดคุย', wait: '👁️ สังเกต', wake: '⏰ ปลุก', clean: '🧹 ทำความสะอาด' },
+    mood: { happy: 'มีความสุข', playful: 'ขี้เล่น', content: 'พอใจ', sleepy: 'ง่วงนอน', hungry: 'หิวข้าว', annoyed: 'หงุดหงิด', curious: 'อยากรู้อยากเห็น', scared: 'กลัว', relaxed: 'ผ่อนคลาย' },
+    time: { dawn: 'รุ่งเช้า', morning: 'เช้า', afternoon: 'บ่าย', evening: 'เย็น', night: 'กลางคืน', late_night: 'ดึก' },
+    timeFmt: (emoji, period, hour, min) => `${emoji} ${hour}:${min}`,
+    stage: { kitten: 'ลูกแมว', adult: 'โต', senior: 'สูงวัย' },
+    stageFmt: (stage, day) => `${stage} · วัน ${day}`,
+    relStatus: { stranger: 'คนแปลกหน้า', wary: 'ระแวง', friendly: 'เป็นมิตร', bonded: 'ผูกพัน', bestfriend: 'เพื่อนรัก' },
+    relFmt: (total, pct, status) => `${total} ครั้ง · ${status}`,
+    traitNotify: {
+      boldness_high: '{name} กล้าหาญขึ้นแล้ว!',
+      boldness_low: '{name} ดูขี้กลัวขึ้น...',
+      affection_high: '{name} ขี้อ้อนขึ้นแล้ว!',
+      affection_low: '{name} ดูเฉยชาขึ้น...',
+      appetite_high: '{name} เป็นนักกินแล้ว!',
+    },
+    hintDefault: '💡 กดเลือกแมวในห้อง แล้วใช้ปุ่มด้านล่าง',
+    hintSleepy: '😴 แมวกำลังหลับ... รอดูอย่างเดียวนะ',
+    hintScared: '🙀 แมวกลัวมาก... อย่ายุ่ง รอให้สงบก่อน',
+    errorMsg: '⚠️ เกิดข้อผิดพลาด',
+    speed: 'ความเร็ว',
+    rebirth: 'เกิดใหม่',
+    rebirthConfirm: 'เริ่มใหม่? ข้อมูลทั้งหมดจะหายไป',
+    nameCat1: 'ตั้งชื่อแมวของคุณ',
+    nameCat2: '',
+    hintAutoCare: '🧹 แม่บ้านกำลังดูแลอยู่... นั่งพักได้เลย',
+    autoCareOn: '🧹 ไล่แม่บ้านออก',
+    autoCareOff: '🧹 จ้างแม่บ้าน',
+    autoCareLog: { feed: 'ให้อาหาร', pet: 'ลูบหัว', groom: 'แปรงขน', play: 'ชวนเล่น', talk: 'พูดคุย', wait: 'ปล่อยไว้', clean: 'ทำความสะอาด' },
+    autoCareWho: (name, action) => `ดูแล ${name}: ${action}`,
+    maidSpeech: { arrive: 'มาแล้วจ้า~', feed: 'ข้าวเจ้านะ~', pet: 'เด็กดี~', groom: 'มาแปรงขนนะ~', play: 'มาเล่นกัน~', talk: 'คุยกันนะ~', wait: 'หนูสบายดีนะ~', clean: 'ทำความสะอาดกระบะทราย~', leave: 'ไปก่อนนะจ้า~' },
+    personality: {
+      0: [{e:'🦁',t:'กล้า'},{e:'🥰',t:'ขี้อ้อน'},{e:'🍗',t:'ชอบกิน'}],
+      1: [{e:'🐭',t:'ขี้กลัว'},{e:'😎',t:'เฉย'},{e:'🥗',t:'เลือกกิน'}],
+    },
+    details: 'รายละเอียด',
+    caretakerLog: '🐱 บันทึกแม่บ้าน',
+  },
+  en: {
+    subtitle: 'Virtual Pet with a Mind — powered by ML',
+    catNames: ['Som', 'Tao'],
+    greetings: ['Hello~ I\'m Som!', 'Meow~ I\'m Tao!'],
+    stats: { hunger: 'Hunger', energy: 'Energy', happiness: 'Happy', curiosity: 'Curious', bond: 'Bond', stress: 'Stress', trust: 'Trust', comfort: 'Comfort', bladder: 'Bladder', hygiene: 'Hygiene' },
+    statTips: { hunger: 'Hunger — High = needs food', energy: 'Energy — Low = gets sleepy', happiness: 'Happiness — High = good mood', curiosity: 'Curiosity — High = wants to explore', bond: 'Bond — Grows from playing together', stress: 'Stress — High = annoyed or scared', trust: 'Trust — Grows from good care', comfort: 'Comfort — Drops when stressed', bladder: 'Bladder — Full = needs litter box', hygiene: 'Hygiene — Low = needs grooming' },
+    buttons: { feed: '🍖 Feed', pet: '🤚 Pet', groom: '🪮 Groom', play: '🧶 Play', talk: '💬 Talk', wait: '👁️ Observe', wake: '⏰ Wake Up', clean: '🧹 Clean' },
+    mood: { happy: 'Happy', playful: 'Playful', content: 'Content', sleepy: 'Sleepy', hungry: 'Hungry', annoyed: 'Annoyed', curious: 'Curious', scared: 'Scared', relaxed: 'Relaxed' },
+    time: { dawn: 'Dawn', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', night: 'Night', late_night: 'Late Night' },
+    timeFmt: (emoji, period, hour, min) => `${emoji} ${hour}:${min}`,
+    stage: { kitten: 'Kitten', adult: 'Adult', senior: 'Senior' },
+    stageFmt: (stage, day) => `${stage} · Day ${day}`,
+    relStatus: { stranger: 'Stranger', wary: 'Wary', friendly: 'Friendly', bonded: 'Bonded', bestfriend: 'Best Friend' },
+    relFmt: (total, pct, status) => `${total} times · ${status}`,
+    traitNotify: {
+      boldness_high: '{name} is becoming braver!',
+      boldness_low: '{name} seems more timid...',
+      affection_high: '{name} is becoming more cuddly!',
+      affection_low: '{name} seems more aloof...',
+      appetite_high: '{name} is becoming a foodie!',
+    },
+    hintDefault: '💡 Use the buttons below to interact with your cat',
+    hintSleepy: '😴 Cat is sleeping... just wait',
+    hintScared: '🙀 Cat is terrified... leave it alone',
+    errorMsg: '⚠️ Something went wrong',
+    speed: 'Speed',
+    rebirth: 'Rebirth',
+    rebirthConfirm: 'Start over? All progress will be lost.',
+    nameCat1: 'Name your cat',
+    nameCat2: '',
+    hintAutoCare: '🧹 Caretaker is on duty... sit back and relax',
+    autoCareOn: '🧹 Fire Caretaker',
+    autoCareOff: '🧹 Hire Caretaker',
+    autoCareLog: { feed: 'Fed', pet: 'Petted', groom: 'Groomed', play: 'Played with', talk: 'Talked to', wait: 'Left alone', clean: 'Cleaned litter' },
+    autoCareWho: (name, action) => `${action} ${name}`,
+    maidSpeech: { arrive: 'I\'m here~', feed: 'Dinnertime~', pet: 'Good kitty~', groom: 'Brushing time~', play: 'Let\'s play~', talk: 'Hey there~', wait: 'You\'re fine~', clean: 'Cleaning the litter~', leave: 'See you later~' },
+    personality: {
+      0: [{e:'🦁',t:'Bold'},{e:'🥰',t:'Cuddly'},{e:'🍗',t:'Foodie'}],
+      1: [{e:'🐭',t:'Shy'},{e:'😎',t:'Aloof'},{e:'🥗',t:'Picky'}],
+    },
+    details: 'Details',
+    caretakerLog: '🐱 Caretaker Log',
+  },
+  ko: {
+    subtitle: '두뇌를 가진 가상 반려묘 — ML 기반',
+    catNames: ['솜', '타오'],
+    greetings: ['안녕~ 나는 솜이야!', '냐옹~ 나는 타오야!'],
+    stats: { hunger: '배고픔', energy: '에너지', happiness: '행복', curiosity: '호기심', bond: '유대감', stress: '스트레스', trust: '신뢰', comfort: '편안함', bladder: '방광', hygiene: '위생' },
+    statTips: { hunger: '배고픔 — 높으면 밥 필요', energy: '에너지 — 낮으면 졸려요', happiness: '행복 — 높으면 기분 좋아요', curiosity: '호기심 — 높으면 탐색해요', bond: '유대감 — 같이 놀면 올라가요', stress: '스트레스 — 높으면 짜증나요', trust: '신뢰 — 잘 돌봐주면 올라가요', comfort: '편안함 — 스트레스 받으면 내려가요', bladder: '방광 — 가득 차면 화장실 필요', hygiene: '위생 — 낮으면 그루밍 필요' },
+    buttons: { feed: '🍖 밥주기', pet: '🤚 쓰다듬기', groom: '🪮 그루밍', play: '🧶 놀아주기', talk: '💬 대화하기', wait: '👁️ 관찰하기', wake: '⏰ 깨우기', clean: '🧹 청소' },
+    mood: { happy: '행복해', playful: '장난꾸러기', content: '만족', sleepy: '졸려', hungry: '배고파', annoyed: '짜증나', curious: '궁금해', scared: '무서워', relaxed: '편안해' },
+    time: { dawn: '새벽', morning: '아침', afternoon: '오후', evening: '저녁', night: '밤', late_night: '심야' },
+    timeFmt: (emoji, period, hour, min) => `${emoji} ${hour}:${min}`,
+    stage: { kitten: '새끼', adult: '성묘', senior: '노묘' },
+    stageFmt: (stage, day) => `${stage} · ${day}일`,
+    relStatus: { stranger: '낯선 사람', wary: '경계', friendly: '친근', bonded: '유대', bestfriend: '절친' },
+    relFmt: (total, pct, status) => `${total}회 · ${status}`,
+    traitNotify: {
+      boldness_high: '{name}이(가) 용감해지고 있어요!',
+      boldness_low: '{name}이(가) 소심해지고 있어요...',
+      affection_high: '{name}이(가) 더 애교쟁이가 되고 있어요!',
+      affection_low: '{name}이(가) 더 도도해지고 있어요...',
+      appetite_high: '{name}이(가) 먹보가 되고 있어요!',
+    },
+    hintDefault: '💡 방에서 고양이를 선택한 후 아래 버튼을 사용하세요',
+    hintSleepy: '😴 고양이가 자고 있어요... 기다려주세요',
+    hintScared: '🙀 고양이가 무서워해요... 건드리지 마세요',
+    errorMsg: '⚠️ 오류가 발생했습니다',
+    speed: '속도',
+    rebirth: '다시 태어나기',
+    rebirthConfirm: '다시 시작할까요? 모든 진행 상황이 사라집니다.',
+    nameCat1: '고양이 이름 짓기',
+    nameCat2: '',
+    hintAutoCare: '🧹 도우미가 돌보고 있어요... 편히 쉬세요',
+    autoCareOn: '🧹 도우미 해고',
+    autoCareOff: '🧹 도우미 고용',
+    autoCareLog: { feed: '밥 줌', pet: '쓰다듬음', groom: '그루밍', play: '놀아줌', talk: '대화함', wait: '지켜봄', clean: '화장실 청소' },
+    autoCareWho: (name, action) => `${name} ${action}`,
+    maidSpeech: { arrive: '왔어요~', feed: '밥이에요~', pet: '착하지~', groom: '그루밍 시간~', play: '같이 놀자~', talk: '안녕~', wait: '괜찮아~', clean: '화장실 청소할게~', leave: '다음에 또 올게요~' },
+    personality: {
+      0: [{e:'🦁',t:'용감'},{e:'🥰',t:'애교쟁이'},{e:'🍗',t:'먹보'}],
+      1: [{e:'🐭',t:'겁쟁이'},{e:'😎',t:'도도'},{e:'🥗',t:'까다로운'}],
+    },
+    details: '상세',
+    caretakerLog: '🐱 돌봄 기록',
+  },
+};
+
+const MOOD_EMOJI = {
+  happy:'😸', playful:'😺', content:'😌', sleepy:'😴',
+  hungry:'🍖', annoyed:'😾', curious:'🧐', scared:'🙀', relaxed:'😽'
+};
+const TIME_EMOJI = {
+  dawn:'🌅', morning:'☀️', afternoon:'🌤️', evening:'🌆', night:'🌙', late_night:'🌑'
+};
+
+function t() { return I18N[currentLang]; }
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('catLang', lang);
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+  applyLang();
+}
+
+function applyLang() {
+  const L = t();
+  document.getElementById('subtitle').textContent = L.subtitle;
+  // Single cat mode — only cat 0
+  {
+    const i = 0;
+    const displayName = catNames[i] || L.catNames[i];
+    document.getElementById('cat-name-' + i).textContent = displayName;
+    document.querySelector('#room-cat-' + i + ' .cat-tag').textContent = displayName;
+    for (const key of Object.keys(L.stats)) {
+      const el = document.getElementById('lbl-' + key + '-' + i);
+      if (el) el.textContent = L.stats[key];
+    }
+    const pEl = document.getElementById('personality-' + i);
+    if (gameCats[i]) {
+      const p = gameCats[i].state;
+      const boldLabel = p.boldness > 0.6 ? (currentLang === 'th' ? 'กล้า' : currentLang === 'ko' ? '용감' : 'Bold') : (currentLang === 'th' ? 'ขี้กลัว' : currentLang === 'ko' ? '겁쟁이' : 'Shy');
+      const affLabel = p.affection > 0.6 ? (currentLang === 'th' ? 'ขี้อ้อน' : currentLang === 'ko' ? '애교쟁이' : 'Cuddly') : (currentLang === 'th' ? 'เฉย' : currentLang === 'ko' ? '도도' : 'Aloof');
+      const appLabel = p.appetite > 0.6 ? (currentLang === 'th' ? 'ชอบกิน' : currentLang === 'ko' ? '먹보' : 'Foodie') : (currentLang === 'th' ? 'เลือกกิน' : currentLang === 'ko' ? '까다로운' : 'Picky');
+      const boldEmoji = p.boldness > 0.6 ? '🦁' : '🐭';
+      const affEmoji = p.affection > 0.6 ? '🥰' : '😎';
+      const appEmoji = p.appetite > 0.6 ? '🍗' : '🥗';
+      pEl.innerHTML = `<span class="personality-tag">${boldEmoji} ${boldLabel}</span><span class="personality-tag">${affEmoji} ${affLabel}</span><span class="personality-tag">${appEmoji} ${appLabel}</span>`;
+    } else {
+      pEl.innerHTML = L.personality[i].map(p => `<span class="personality-tag">${p.e} ${p.t}</span>`).join('');
+    }
+    const emoji = MOOD_EMOJI[catMoods[i]] || '😺';
+    const moodText = L.mood[catMoods[i]] || catMoods[i];
+    const moodEl = document.getElementById('mood-' + i);
+    moodEl.textContent = emoji + ' ' + moodText;
+    moodEl.className = 'card-mood ' + catMoods[i];
+  }
+  {
+    const sp = document.getElementById('speech-0');
+    if (!sp.textContent || sp.classList.contains('visible')) {
+      sp.textContent = L.greetings[0];
+      sp.classList.add('visible');
+    }
+  }
+  document.getElementById('speed-label').textContent = L.speed;
+  document.getElementById('btn-rebirth').textContent = '🔄 ' + L.rebirth;
+  document.getElementById('btn-autocare').textContent = autoCareOn ? L.autoCareOn : L.autoCareOff;
+  document.getElementById('btn-feed').textContent = L.buttons.feed;
+  document.getElementById('btn-pet').textContent = L.buttons.pet;
+  document.getElementById('btn-groom').textContent = L.buttons.groom;
+  document.getElementById('btn-play').textContent = L.buttons.play;
+  document.getElementById('btn-talk').textContent = L.buttons.talk;
+  document.getElementById('btn-wait').textContent = L.buttons.wait;
+  document.getElementById('btn-wake').textContent = L.buttons.wake;
+  document.getElementById('btn-clean').textContent = L.buttons.clean;
+  // Update details toggle text
+  document.querySelectorAll('.details-toggle').forEach((btn, i) => {
+    const isExpanded = document.getElementById('details-' + i).classList.contains('expanded');
+    btn.textContent = (L.details || 'Details') + (isExpanded ? ' ▲' : ' ▼');
+  });
+  // Update caretaker log header
+  const ch = document.getElementById('caretaker-header');
+  if (ch) ch.querySelector('span').textContent = L.caretakerLog || '🐱 Caretaker Log';
+  updateButtons();
+}
+
+let autoCareOn = false;
+let autoCareTimer = null;
+
+function saveToCache() {
+  try {
+    const cache = {
+      version: CACHE_VERSION,
+      speed: currentSpeed,
+      names: catNames,
+      cats: gameCats.map(c => ({
+        state: {
+          hunger: c.state.hunger, energy: c.state.energy, happiness: c.state.happiness,
+          curiosity: c.state.curiosity, bond: c.state.bond_level, stress: c.state.stress,
+          trust: c.state.trust, comfort: c.state.comfort, bladder: c.state.bladder, hygiene: c.state.hygiene,
+        },
+        personality: { boldness: c.state.boldness, affection: c.state.affection, appetite: c.state.appetite },
+        pos: c.pos,
+        totalInteractions: c.memory.totalInteractions,
+        positiveRatio: c.memory.recentPositiveRatio,
+        age_days: c.state.age_days,
+        life_stage: c.state.life_stage,
+      })),
+    };
+    localStorage.setItem('catCache', JSON.stringify(cache));
+  } catch (e) {}
+}
+
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem('catCache');
+    if (!raw) return null;
+    const cache = JSON.parse(raw);
+    if (cache.version !== CACHE_VERSION) return null;
+    return cache;
+  } catch (e) { return null; }
+}
+
+function restoreFromCache(cache) {
+  for (let i = 0; i < 2; i++) {
+    const cd = cache.cats[i];
+    const s = gameCats[i].state;
+    if (cd.state) {
+      s.hunger = cd.state.hunger ?? 0.3;
+      s.energy = cd.state.energy ?? 0.8;
+      s.happiness = cd.state.happiness ?? 0.5;
+      s.curiosity = cd.state.curiosity ?? 0.5;
+      s.bond_level = cd.state.bond ?? 0.1;
+      s.stress = cd.state.stress ?? 0.1;
+      s.trust = cd.state.trust ?? 0.2;
+      s.comfort = cd.state.comfort ?? 0.5;
+      s.bladder = cd.state.bladder ?? 0.0;
+      s.hygiene = cd.state.hygiene ?? 0.8;
+    }
+    if (cd.personality) {
+      s.boldness = cd.personality.boldness ?? s.boldness;
+      s.affection = cd.personality.affection ?? s.affection;
+      s.appetite = cd.personality.appetite ?? s.appetite;
+    }
+    if (cd.pos) gameCats[i].pos = cd.pos;
+    s.age_days = cd.age_days ?? 5.0;
+    s.life_stage = cd.life_stage ?? 'adult';
+    s._lastUpdate = Date.now() / 1000;
+  }
+}
+
+function onSpeedChange(val) {
+  currentSpeed = parseInt(val);
+  localStorage.setItem('catSpeed', currentSpeed);
+  document.getElementById('speed-val').textContent = currentSpeed + 'x';
+  startAutoRefresh();
+}
+
+function showNamingPrompt() {
+  const L = t();
+  document.getElementById('naming-label-0').textContent = L.nameCat1;
+  document.getElementById('naming-label-1').textContent = L.nameCat2;
+  document.getElementById('name-input-0').value = '';
+  document.getElementById('name-input-1').value = '';
+  document.getElementById('naming-overlay').style.display = 'flex';
+}
+
+function submitNames() {
+  const n0 = document.getElementById('name-input-0').value.trim().slice(0, 20) || t().catNames[0];
+  catNames = [n0, null];
+  document.getElementById('naming-overlay').style.display = 'none';
+  applyCatNames();
+  saveToCache();
+}
+
+function applyCatNames() {
+  const name = catNames[0] || t().catNames[0];
+  document.getElementById('cat-name-0').textContent = name;
+  document.querySelector('#room-cat-0 .cat-tag').textContent = name;
+}
+
+function startEditName(catId) {
+  const tag = document.querySelector('#room-cat-' + catId + ' .cat-tag');
+  const current = catNames[catId] || t().catNames[catId];
+  const input = document.createElement('input');
+  input.className = 'cat-tag-input';
+  input.value = current;
+  input.maxLength = 20;
+  tag.style.display = 'none';
+  tag.parentNode.appendChild(input);
+  input.focus();
+  input.select();
+  const finish = () => {
+    const newName = input.value.trim().slice(0, 20) || current;
+    catNames[catId] = newName;
+    tag.textContent = newName;
+    tag.style.display = '';
+    input.remove();
+    document.getElementById('cat-name-' + catId).textContent = newName;
+    saveToCache();
+  };
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+}
+
+function doRebirth() {
+  if (!confirm(t().rebirthConfirm)) return;
+  localStorage.removeItem('catCache');
+  localStorage.removeItem('catSpeed');
+  catNames = [null, null];
+  currentSpeed = 1;
+
+  gameCats[0].state = new CatState();
+  gameCats[0].state.boldness = 0.8;
+  gameCats[0].state.affection = 0.9;
+  gameCats[0].state.appetite = 0.7;
+  gameCats[0].memory = new CatMemory();
+  gameCats[0].pos = [30, 78];
+
+  litterDirty = 0;
+  virtualStartReal = Date.now() / 1000;
+  virtualStartHour = new Date().getHours() + new Date().getMinutes() / 60;
+
+  document.getElementById('speed-slider').value = 1;
+  document.getElementById('speed-val').textContent = '1x';
+  showNamingPrompt();
+  updateUI(buildResponse());
+  applyLang();
+}
+
+function selectCat(id) {
+  selectedCat = id;
+  document.querySelectorAll('.room-cat').forEach(c => c.classList.remove('selected'));
+  document.getElementById('room-cat-' + id).classList.add('selected');
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('stat-card-' + id).classList.add('selected');
+  updateButtons();
+}
+
+function updateButtons() {
+  const L = t();
+  const mood = catMoods[selectedCat];
+  ['btn-feed','btn-pet','btn-groom','btn-play','btn-talk'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (mood === 'sleepy' || mood === 'scared' || autoCareOn) btn.classList.add('disabled');
+    else btn.classList.remove('disabled');
+  });
+  const wakeBtn = document.getElementById('btn-wake');
+  wakeBtn.style.display = (mood === 'sleepy' && !autoCareOn) ? '' : 'none';
+  const hintEl = document.getElementById('hint-display');
+  if (autoCareOn) hintEl.textContent = L.hintAutoCare;
+  else if (mood === 'sleepy') hintEl.textContent = L.hintSleepy;
+  else if (mood === 'scared') hintEl.textContent = L.hintScared;
+  else hintEl.textContent = L.hintDefault;
+}
+
+function showSpeech(catId, text) {
+  const el = document.getElementById('speech-' + catId);
+  el.textContent = text;
+  el.classList.add('visible');
+  if (speechTimers[catId]) clearTimeout(speechTimers[catId]);
+  speechTimers[catId] = setTimeout(() => el.classList.remove('visible'), 6000);
+}
+
+function doAction(action) {
+  if (busy) return;
+  busy = true;
+  document.querySelectorAll('.btn').forEach(b => b.style.opacity = '0.6');
+
+  const data = processAction(action);
+  updateUI(data);
+
+  document.querySelectorAll('.btn').forEach(b => b.style.opacity = '1');
+  busy = false;
+}
+
+function toggleDetails(catId) {
+  const el = document.getElementById('details-' + catId);
+  const btn = el.parentElement.querySelector('.details-toggle');
+  const L = t();
+  el.classList.toggle('expanded');
+  btn.textContent = (L.details || 'Details') + (el.classList.contains('expanded') ? ' ▲' : ' ▼');
+}
+
+// BGM playlist controls
+const bgm = document.getElementById('bgm');
+bgm.volume = 0.3;
+const BGM_TRACKS = [
+  { src: 'sprites/bgm1.mp3', name: 'Moonlit Whiskers (1)' },
+  { src: 'sprites/bgm2.mp3', name: 'Moonlit Whiskers' },
+  { src: 'sprites/bgm3.mp3', name: 'Midnight Cottage Save Point (2)' },
+  { src: 'sprites/bgm4.mp3', name: 'Midnight Cottage Save Point (1)' },
+  { src: 'sprites/bgm5.mp3', name: 'Soft Steps, Small Wonders (1)' },
+  { src: 'sprites/bgm6.mp3', name: 'Soft Steps, Small Wonders' },
+];
+let bgmPlaying = false;
+let bgmMuted = false;
+let bgmTrack = parseInt(localStorage.getItem('catBgmTrack')) || 0;
+if (bgmTrack >= BGM_TRACKS.length) bgmTrack = 0;
+
+function loadTrack(idx) {
+  bgmTrack = ((idx % BGM_TRACKS.length) + BGM_TRACKS.length) % BGM_TRACKS.length;
+  bgm.src = BGM_TRACKS[bgmTrack].src;
+  localStorage.setItem('catBgmTrack', bgmTrack);
+}
+
+function updateMusicUI() {
+  const btn = document.getElementById('music-btn');
+  btn.textContent = bgmPlaying ? '⏸️' : '▶️';
+  btn.classList.toggle('playing', bgmPlaying);
+  document.getElementById('music-mute').textContent = bgmMuted ? '🔇' : '🔊';
+}
+
+function playBgm() {
+  bgm.play().then(() => { bgmPlaying = true; updateMusicUI(); }).catch(() => {});
+}
+
+function toggleMusic() {
+  if (bgmPlaying) {
+    bgm.pause();
+    bgmPlaying = false;
+  } else {
+    if (!bgm.src || bgm.src === location.href) loadTrack(bgmTrack);
+    playBgm();
+  }
+  localStorage.setItem('catBgm', bgmPlaying ? '1' : '0');
+  updateMusicUI();
+}
+
+function nextTrack() {
+  loadTrack(bgmTrack + 1);
+  if (bgmPlaying) playBgm();
+}
+
+function prevTrack() {
+  loadTrack(bgmTrack - 1);
+  if (bgmPlaying) playBgm();
+}
+
+function toggleMute() {
+  bgmMuted = !bgmMuted;
+  bgm.muted = bgmMuted;
+  updateMusicUI();
+}
+
+// Auto-advance to next track when current ends
+bgm.addEventListener('ended', () => { loadTrack(bgmTrack + 1); playBgm(); });
+
+// Autoplay on first load
+loadTrack(bgmTrack);
+bgm.play().then(() => { bgmPlaying = true; updateMusicUI(); }).catch(() => {
+  // Browser blocked autoplay — play on first interaction
+  const events = ['click','touchstart','keydown'];
+  function startBgm() {
+    bgm.play().then(() => { bgmPlaying = true; updateMusicUI(); }).catch(() => {});
+    events.forEach(e => document.removeEventListener(e, startBgm));
+  }
+  events.forEach(e => document.addEventListener(e, startBgm, { once: true }));
+});
+
+function toggleSettings() {
+  const panel = document.getElementById('settings-panel');
+  panel.classList.toggle('visible');
+}
+
+function toggleCaretakerLog() {
+  const header = document.getElementById('caretaker-header');
+  const log = document.getElementById('autocare-log');
+  header.classList.toggle('expanded');
+  log.classList.toggle('visible');
+}
+
+function updateUI(data) {
+  const L = t();
+  for (const c of data.cats) {
+    const i = c.id;
+    catMoods[i] = c.mood;
+    if (c.text) showSpeech(i, c.text);
+
+    document.getElementById('cat-' + i).className = 'cat ' + c.mood;
+
+    // Switch sprite based on mood/action
+    const sprite = document.getElementById('sprite-' + i);
+    const catArea = document.getElementById('cat-' + i).closest('.cat-area');
+    if (sprite && catArea) {
+      const isSleeping = c.mood === 'sleepy' || c.cat_action === 'nap';
+      const isWalking = ['explore','play_alone','rub','hiss','ignore'].includes(c.cat_action);
+      sprite.src = isSleeping ? 'sprites/cat_sleeping.apng' : isWalking ? 'sprites/cat_walking.apng' : 'sprites/cat_idle.apng';
+      sprite.style.display = '';
+      catArea.style.display = 'none';
+    }
+    if (c.pos) {
+      const [nx, ny] = c.pos;
+      const [ox, oy] = catPositions[i];
+      const roomCat = document.getElementById('room-cat-' + i);
+      if (Math.abs(nx - ox) > 2 || Math.abs(ny - oy) > 2) {
+        roomCat.classList.add('walking');
+        setTimeout(() => roomCat.classList.remove('walking'), 1500);
+      }
+      roomCat.style.left = nx + '%';
+      roomCat.style.top = ny + '%';
+      catPositions[i] = c.pos;
+    }
+
+    const emoji = MOOD_EMOJI[c.mood] || '😺';
+    const moodText = L.mood[c.mood] || c.mood;
+    const moodEl = document.getElementById('mood-' + i);
+    moodEl.textContent = emoji + ' ' + moodText;
+    moodEl.className = 'card-mood ' + c.mood;
+
+    const ageBadge = document.getElementById('age-badge-' + i);
+    if (ageBadge && c.life_stage) {
+      const stageName = L.stage ? (L.stage[c.life_stage] || c.life_stage) : c.life_stage;
+      ageBadge.textContent = L.stageFmt ? L.stageFmt(stageName, Math.floor(c.age_days || 0)) : `${c.life_stage}`;
+    }
+
+    const roomCatEl = document.getElementById('room-cat-' + i);
+    roomCatEl.classList.remove('kitten', 'senior');
+    if (c.life_stage === 'kitten') roomCatEl.classList.add('kitten');
+    else if (c.life_stage === 'senior') roomCatEl.classList.add('senior');
+
+    const s = c.state;
+    document.getElementById('bar-hunger-' + i).style.width = (s.hunger * 100) + '%';
+    document.getElementById('bar-energy-' + i).style.width = (s.energy * 100) + '%';
+    document.getElementById('bar-happiness-' + i).style.width = (s.happiness * 100) + '%';
+    document.getElementById('bar-curiosity-' + i).style.width = (s.curiosity * 100) + '%';
+    document.getElementById('bar-bond-' + i).style.width = (s.bond * 100) + '%';
+    document.getElementById('bar-stress-' + i).style.width = (s.stress * 100) + '%';
+    document.getElementById('bar-trust-' + i).style.width = (s.trust * 100) + '%';
+    document.getElementById('bar-comfort-' + i).style.width = (s.comfort * 100) + '%';
+    document.getElementById('bar-bladder-' + i).style.width = ((s.bladder || 0) * 100) + '%';
+    document.getElementById('bar-hygiene-' + i).style.width = ((s.hygiene || 0.8) * 100) + '%';
+
+    const r = c.relationship;
+    const trustBond = (c.state.trust || 0) + (c.state.bond || 0);
+    let relKey = 'stranger';
+    if (trustBond >= 1.5) relKey = 'bestfriend';
+    else if (trustBond >= 1.0) relKey = 'bonded';
+    else if (trustBond >= 0.6) relKey = 'friendly';
+    else if (trustBond >= 0.3) relKey = 'wary';
+    const relStatusText = L.relStatus ? L.relStatus[relKey] : relKey;
+    document.getElementById('relationship-' + i).textContent =
+      L.relFmt(r.total, Math.round(r.positivity * 100), relStatusText);
+
+    if (c.personality) {
+      const prev = prevTraits[i] || {};
+      const curr = c.personality;
+      const name = catNames[i] || L.catNames[i];
+      for (const [trait, val] of Object.entries(curr)) {
+        const prevVal = prev[trait];
+        if (prevVal !== undefined) {
+          if (prevVal < 0.7 && val >= 0.7) {
+            const key = trait + '_high';
+            if (L.traitNotify && L.traitNotify[key]) showSpeech(i, L.traitNotify[key].replace('{name}', name));
+          }
+          if (prevVal > 0.3 && val <= 0.3) {
+            const key = trait + '_low';
+            if (L.traitNotify && L.traitNotify[key]) showSpeech(i, L.traitNotify[key].replace('{name}', name));
+          }
+        }
+      }
+      prevTraits[i] = { ...curr };
+    }
+  }
+
+  if (data.time_period) {
+    document.body.className = data.time_period;
+    const tEmoji = TIME_EMOJI[data.time_period] || '🕐';
+    const periodName = L.time[data.time_period] || data.time_period;
+    const hour = String(data.hour).padStart(2, '0');
+    const min = String(data.minute || 0).padStart(2, '0');
+    document.getElementById('time-badge').textContent = L.timeFmt(tEmoji, periodName, hour, min);
+  }
+  const ld = data.litter_dirty || 0;
+  const litterBox = document.getElementById('litter-box');
+  if (litterBox) {
+    if (ld === 0) litterBox.textContent = '🧻';
+    else if (ld === 1) litterBox.textContent = '💩';
+    else litterBox.textContent = '🤢';
+  }
+  const cleanBtn = document.getElementById('btn-clean');
+  if (cleanBtn) cleanBtn.style.display = (ld > 0 && !autoCareOn) ? '' : 'none';
+
+  updateButtons();
+  saveToCache();
+}
+
+// ===== AUTO-CARE =====
+function showMaidSpeech(text) {
+  const el = document.getElementById('maid-speech');
+  el.textContent = text;
+  el.classList.add('visible');
+  clearTimeout(showMaidSpeech._t);
+  showMaidSpeech._t = setTimeout(() => el.classList.remove('visible'), 2500);
+}
+
+function toggleAutoCare() {
+  autoCareOn = !autoCareOn;
+  const btn = document.getElementById('btn-autocare');
+  const log = document.getElementById('autocare-log');
+  const maid = document.getElementById('maid');
+  const header = document.getElementById('caretaker-header');
+  const L = t();
+
+  if (autoCareOn) {
+    btn.classList.add('active');
+    btn.textContent = L.autoCareOn;
+    header.classList.add('visible');
+    log.classList.add('visible');
+    log.innerHTML = '';
+    maid.classList.add('visible');
+    showMaidSpeech(L.maidSpeech.arrive);
+    autoCareTimer = setInterval(autoCareStep, 4000);
+    setTimeout(autoCareStep, 1500);
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = L.autoCareOff;
+    header.classList.remove('visible');
+    log.classList.remove('visible');
+    if (autoCareTimer) { clearInterval(autoCareTimer); autoCareTimer = null; }
+    showMaidSpeech(L.maidSpeech.leave);
+    setTimeout(() => { maid.classList.remove('visible'); }, 1500);
+  }
+  updateButtons();
+}
+
+function autoCareDecide(catState, mood) {
+  const s = catState;
+  if (litterDirty >= 2) return 'clean';
+  if (mood === 'sleepy' || mood === 'scared') return 'wait';
+  if (s.hunger > 0.7) return 'feed';
+  if ((s.hygiene || 1) < 0.4) return 'groom';
+  if (s.stress > 0.5) return 'talk';
+  if (s.hunger > 0.5) return 'feed';
+  if (s.energy < 0.25) return 'wait';
+  if (s.happiness < 0.4 && s.trust > 0.3) return 'pet';
+  if (s.energy > 0.4 && (s.curiosity > 0.5 || mood === 'playful')) return 'play';
+  if (s.bond < 0.3) return 'talk';
+  if (s.trust < 0.3) return 'talk';
+  if (s.happiness > 0.5 && s.bond > 0.3) return 'pet';
+  return pick(['pet','talk','play','wait']);
+}
+
+function autoCareStep() {
+  if (!autoCareOn || busy) return;
+
+  const targetId = 0;
+  const action = autoCareDecide(gameCats[0].state, gameCats[0].state.mood);
+  const L = t();
+
+
+  showMaidSpeech(L.maidSpeech[action] || L.maidSpeech.arrive);
+  selectedCat = targetId;
+  selectCat(targetId);
+  doAction(action);
+
+  const logEl = document.getElementById('autocare-log');
+  const now = new Date();
+  const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  const actionName = L.autoCareLog[action] || action;
+  const catName = getDisplayName(targetId);
+  const entry = document.createElement('div');
+  entry.innerHTML = `<span class="log-time">${timeStr}</span> ${L.autoCareWho(catName, actionName)}`;
+  logEl.prepend(entry);
+  while (logEl.children.length > 10) logEl.removeChild(logEl.lastChild);
+}
+
+// Auto-refresh
+let refreshTimer = null;
+function startAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  const interval = Math.max(500, Math.round(10000 / currentSpeed));
+  refreshTimer = setInterval(tickAndRefresh, interval);
+}
+
+// ===== INIT =====
+const cachedData = loadFromCache();
+if (cachedData && cachedData.cats) {
+  catNames = cachedData.names || [null, null];
+  currentSpeed = cachedData.speed || 1;
+  restoreFromCache(cachedData);
+} else {
+  showNamingPrompt();
+}
+
+document.getElementById('speed-slider').value = currentSpeed;
+document.getElementById('speed-val').textContent = currentSpeed + 'x';
+setLang(currentLang);
+applyCatNames();
+updateUI(buildResponse());
+startAutoRefresh();
+
+// Floating tooltip for stat rows
+const STAT_KEYS = ['hunger','energy','happiness','hygiene','curiosity','bond','stress','trust','comfort','bladder'];
+const floatingTip = document.createElement('div');
+floatingTip.className = 'stat-tooltip';
+document.body.appendChild(floatingTip);
+
+function showStatTip(row, x, y) {
+  const cls = [...row.classList].find(c => c.startsWith('stat-') && c !== 'stat-row');
+  if (!cls) return;
+  const key = cls.replace('stat-', '');
+  const card = row.closest('.cat-card');
+  if (!card) return;
+  const ci = card.id.endsWith('0') ? 0 : 1;
+  const bar = document.getElementById('bar-' + key + '-' + ci);
+  if (!bar) return;
+  const val = Math.round(parseFloat(bar.style.width) || 0);
+  const L = t();
+  const statName = L.stats[key] || key;
+  const desc = (L.statTips && L.statTips[key]) || '';
+  floatingTip.innerHTML = `<span class="tt-name">${statName}</span> <span class="tt-val">${val}%</span><br>${desc}`;
+  floatingTip.style.left = x + 'px';
+  floatingTip.style.top = (y - 50) + 'px';
+  floatingTip.style.transform = 'translateX(-50%)';
+  floatingTip.classList.add('active');
+}
+
+document.querySelectorAll('.stat-row').forEach(row => {
+  // Desktop: hover
+  row.addEventListener('mouseenter', (e) => showStatTip(row, e.clientX, e.clientY));
+  row.addEventListener('mousemove', (e) => {
+    floatingTip.style.left = e.clientX + 'px';
+    floatingTip.style.top = (e.clientY - 50) + 'px';
+  });
+  row.addEventListener('mouseleave', () => floatingTip.classList.remove('active'));
+  // Mobile: tap to show, tap elsewhere to hide
+  row.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    showStatTip(row, touch.clientX, touch.clientY);
+  }, { passive: true });
+});
+document.addEventListener('touchstart', () => floatingTip.classList.remove('active'), { passive: true });
+
+window.addEventListener('beforeunload', saveToCache);
+</script>
+</body>
+</html>
