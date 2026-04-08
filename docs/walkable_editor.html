@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Walkable Area Editor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1850; color: #fff; font-family: system-ui; padding: 16px; }
+h1 { color: #FF8C42; margin-bottom: 4px; font-size: 1.3em; }
+p.sub { color: #b8b0d0; font-size: 0.85em; margin-bottom: 12px; }
+
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  margin-bottom: 12px;
+  background: rgba(255,255,255,0.06);
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+.toolbar label { font-size: 0.85em; color: #b8b0d0; }
+.toolbar button {
+  padding: 6px 14px; border: none; border-radius: 6px;
+  font-size: 0.85em; cursor: pointer; color: #fff;
+}
+.btn-draw { background: #4CAF50; }
+.btn-erase { background: #F44336; }
+.btn-clear { background: #9E9E9E; }
+.btn-export { background: #2196F3; }
+.btn-test { background: #FF9800; }
+.toolbar button.active { outline: 2px solid #fff; outline-offset: 2px; }
+.toolbar input[type=range] { width: 100px; vertical-align: middle; }
+
+.editor-wrap {
+  position: relative;
+  display: inline-block;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+.editor-wrap img {
+  display: block;
+  width: 700px;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  cursor: crosshair;
+}
+
+.output {
+  margin-top: 12px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.8em;
+  font-family: monospace;
+  color: #e0d8f0;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  display: none;
+}
+
+.cat-test {
+  position: absolute;
+  width: 50px;
+  pointer-events: none;
+  display: none;
+  z-index: 10;
+}
+
+.legend {
+  display: flex; gap: 16px; margin-top: 8px; font-size: 0.8em; color: #b8b0d0;
+}
+.legend span { display: flex; align-items: center; gap: 4px; }
+.legend .swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<h1>Walkable Area Editor</h1>
+<p class="sub">วาดพื้นที่ที่แมวเดินได้ (สีเขียว) บน background — แล้ว Export เป็น JS constraint</p>
+
+<div class="toolbar">
+  <button class="btn-draw active" id="btn-draw" onclick="setMode('draw')">Draw</button>
+  <button class="btn-erase" id="btn-erase" onclick="setMode('erase')">Erase</button>
+  <label>Brush: <input type="range" id="brush-size" min="5" max="80" value="30" oninput="brushVal.textContent=this.value+'px'"> <span id="brushVal">30px</span></label>
+  <button class="btn-clear" onclick="clearCanvas()">Clear</button>
+  <button class="btn-export" onclick="exportBounds()">Export JS</button>
+  <button class="btn-test" onclick="toggleTest()">Test Cat</button>
+  <label style="margin-left:auto">Opacity: <input type="range" id="opacity" min="10" max="80" value="40" oninput="updateOpacity()"></label>
+</div>
+
+<div class="editor-wrap" id="editor-wrap">
+  <img src="sprites/bg.png" id="bg" draggable="false">
+  <canvas id="canvas"></canvas>
+  <img class="cat-test" id="cat-test" src="sprites/cat_idle.apng">
+</div>
+
+<div class="legend">
+  <span><div class="swatch" style="background:rgba(0,200,0,0.4)"></div> Walkable zone</span>
+  <span><div class="swatch" style="background:rgba(255,0,0,0.3)"></div> Blocked zone</span>
+</div>
+
+<div class="output" id="output"></div>
+
+<script src="walkable_zone.js"></script>
+<script>
+const bg = document.getElementById('bg');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('editor-wrap');
+const catTest = document.getElementById('cat-test');
+
+let mode = 'draw';
+let painting = false;
+let testMode = false;
+let canvasW, canvasH;
+
+bg.onload = () => initCanvas();
+if (bg.complete) initCanvas();
+
+function initCanvas() {
+  canvasW = bg.naturalWidth;
+  canvasH = bg.naturalHeight;
+  canvas.width = canvasW;
+  canvas.height = canvasH;
+
+  // Restore from localStorage if available
+  const saved = localStorage.getItem('walkable_canvas');
+  if (saved) {
+    const img = new Image();
+    img.onload = () => { ctx.drawImage(img, 0, 0); };
+    img.src = saved;
+  } else if (typeof WALK_Y_MIN !== 'undefined') {
+    // Fallback: load from walkable_zone.js
+    ctx.fillStyle = 'rgba(0, 200, 0, 0.4)';
+    const keys = Object.keys(WALK_Y_MIN).map(Number).sort((a, b) => a - b);
+    for (let i = 0; i < keys.length; i++) {
+      const xPct = keys[i];
+      const nextXPct = (i < keys.length - 1) ? keys[i + 1] : xPct + 5;
+      const yMinPct = WALK_Y_MIN[xPct];
+      const x1 = (xPct / 100) * canvasW;
+      const x2 = (nextXPct / 100) * canvasW;
+      const y1 = (yMinPct / 100) * canvasH;
+      const y2 = (WALK_Y_MAX / 100) * canvasH;
+      ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+    }
+  }
+}
+
+function saveCanvas() {
+  localStorage.setItem('walkable_canvas', canvas.toDataURL());
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-draw').classList.toggle('active', m === 'draw');
+  document.getElementById('btn-erase').classList.toggle('active', m === 'erase');
+}
+
+function getBrush() {
+  const displayW = canvas.offsetWidth;
+  const scale = canvasW / displayW;
+  return parseInt(document.getElementById('brush-size').value) * scale;
+}
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvasW / rect.width;
+  const scaleY = canvasH / rect.height;
+  return [
+    (e.clientX - rect.left) * scaleX,
+    (e.clientY - rect.top) * scaleY
+  ];
+}
+
+function paint(e) {
+  if (!painting) return;
+  const [x, y] = getPos(e);
+  const r = getBrush();
+  ctx.beginPath();
+  if (mode === 'draw') {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0, 200, 0, 0.4)';
+  } else {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0,0,0,1)';
+  }
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+canvas.addEventListener('mousedown', e => { painting = true; paint(e); });
+canvas.addEventListener('mousemove', e => {
+  paint(e);
+  if (testMode) moveCatTest(e);
+});
+canvas.addEventListener('mouseup', () => { painting = false; saveCanvas(); });
+canvas.addEventListener('mouseleave', () => { painting = false; saveCanvas(); });
+
+// Touch support
+canvas.addEventListener('touchstart', e => { e.preventDefault(); painting = true; paint(e.touches[0]); });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); paint(e.touches[0]); });
+canvas.addEventListener('touchend', () => { painting = false; saveCanvas(); });
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvasW, canvasH);
+  localStorage.removeItem('walkable_canvas');
+}
+
+function updateOpacity() {
+  canvas.style.opacity = document.getElementById('opacity').value / 100;
+}
+
+function toggleTest() {
+  testMode = !testMode;
+  catTest.style.display = testMode ? 'block' : 'none';
+  canvas.style.cursor = testMode ? 'none' : 'crosshair';
+}
+
+function moveCatTest(e) {
+  const rect = wrap.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  // Position cat with feet at cursor
+  catTest.style.left = (x - 25) + 'px';
+  catTest.style.top = (y - catTest.offsetHeight) + 'px';
+  catTest.style.bottom = 'auto';
+
+  // Check if position is walkable
+  const [cx, cy] = getPos(e);
+  const pixel = ctx.getImageData(Math.floor(cx), Math.floor(cy), 1, 1).data;
+  const isWalkable = pixel[3] > 50; // has green paint
+  catTest.style.filter = isWalkable ? 'none' : 'grayscale(1) brightness(0.5)';
+}
+
+function exportBounds() {
+  // Scan canvas to find walkable bounds as % coordinates
+  const imgData = ctx.getImageData(0, 0, canvasW, canvasH);
+  const data = imgData.data;
+
+  let minX = canvasW, maxX = 0, minY = canvasH, maxY = 0;
+  // Sample rows to find vertical bounds per column
+  const rows = [];
+
+  for (let y = 0; y < canvasH; y++) {
+    for (let x = 0; x < canvasW; x++) {
+      const i = (y * canvasW + x) * 4;
+      if (data[i + 3] > 50) { // has paint (walkable)
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  // Convert to percentages
+  const pMinX = Math.floor((minX / canvasW) * 100);
+  const pMaxX = Math.ceil((maxX / canvasW) * 100);
+  const pMinY = Math.floor((minY / canvasH) * 100);
+  const pMaxY = Math.ceil((maxY / canvasH) * 100);
+
+  // Sample more detail: for every 5% column, find y range
+  const detail = [];
+  for (let px = 0; px <= 100; px += 5) {
+    const col = Math.floor((px / 100) * canvasW);
+    let yMin = canvasH, yMax = 0;
+    for (let y = 0; y < canvasH; y++) {
+      const i = (y * canvasW + col) * 4;
+      if (data[i + 3] > 50) {
+        if (y < yMin) yMin = y;
+        if (y > yMax) yMax = y;
+      }
+    }
+    if (yMin < canvasH) {
+      detail.push({
+        x: px,
+        yMin: Math.floor((yMin / canvasH) * 100),
+        yMax: Math.ceil((yMax / canvasH) * 100)
+      });
+    }
+  }
+
+  // Build WALK_Y_MIN object from detail
+  const yMinObj = {};
+  detail.forEach(d => { yMinObj[d.x] = d.yMin; });
+
+  const jsContent =
+`// Walkable zone data — generated from walkable_editor.html
+// x: ${pMinX}%-${pMaxX}%, y per-column min from editor
+const WALK_Y_MIN = ${JSON.stringify(yMinObj)};
+const WALK_X_MIN = ${pMinX};
+const WALK_X_MAX = ${pMaxX};
+const WALK_Y_MAX = ${pMaxY};
+
+function walkYMin(x) {
+  const k = Math.round(x / 5) * 5;
+  return WALK_Y_MIN[Math.min(WALK_X_MAX, Math.max(WALK_X_MIN, k))] || 84;
+}
+
+function clampToWalkable(x, y) {
+  x = Math.max(WALK_X_MIN, Math.min(WALK_X_MAX, x));
+  return [x, Math.max(walkYMin(x), Math.min(WALK_Y_MAX, y))];
+}
+`;
+
+  // Download as walkable_zone.js
+  const blob = new Blob([jsContent], { type: 'text/javascript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'walkable_zone.js';
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  // Also show in output
+  const output = document.getElementById('output');
+  output.style.display = 'block';
+  output.textContent = jsContent;
+}
+</script>
+</body>
+</html>
