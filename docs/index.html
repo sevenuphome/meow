@@ -1091,7 +1091,7 @@ body.dawn, body.morning, body.afternoon, body.evening, body.night, body.late_nig
 
 <!-- Footer -->
 <footer class="footer">
-  🧠 ML Brain (DQN) · <a href="https://github.com/sevenuphome/machinelearning" target="_blank">GitHub</a>
+  🧠 ML Brain (DQN) · <a href="https://github.com/sevenuphome/machinelearning" target="_blank">GitHub</a> · <span id="app-version"></span>
 </footer>
 
 <script src="walkable_zone.js"></script>
@@ -1728,7 +1728,9 @@ function tickAndRefresh() {
 // ============================================================
 // UI CODE
 // ============================================================
-const CACHE_VERSION = 5;
+const CACHE_VERSION = 6;
+const APP_VERSION = '0.1.1';
+document.getElementById('app-version').textContent = 'v' + APP_VERSION;
 let selectedCat = 0;
 let catMoods = ['content', 'content'];
 let catPositions = [clampToWalkable(30, 90), clampToWalkable(70, 90)];
