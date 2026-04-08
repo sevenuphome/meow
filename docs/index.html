@@ -699,7 +699,7 @@ body.dawn, body.morning, body.afternoon, body.evening, body.night, body.late_nig
   height: auto;
   pointer-events: none;
 }
-.maid-speech { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(100,80,180,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 3px 8px; font-size: 0.65em; white-space: nowrap; opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: 11; color: #e0d8f0; }
+.maid-speech { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: rgba(100,80,180,0.35); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 3px 8px; font-size: 0.65em; white-space: nowrap; opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: 11; color: #e0d8f0; }
 .maid-speech.visible { opacity: 1; }
 .maid-speech::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top: 5px solid rgba(100,80,180,0.35); }
 
@@ -1094,6 +1094,7 @@ body.dawn, body.morning, body.afternoon, body.evening, body.night, body.late_nig
   🧠 ML Brain (DQN) · <a href="https://github.com/sevenuphome/machinelearning" target="_blank">GitHub</a>
 </footer>
 
+<script src="walkable_zone.js"></script>
 <script>
 // ============================================================
 // CAT STATE (ported from src/cat_state.py)
@@ -1577,20 +1578,27 @@ class RuleBrain {
 // ============================================================
 // POSITION UPDATE (ported from web.py)
 // ============================================================
-// Walkable zone: y 83%-97%, x 3%-96% (from reference image black zone)
-const FOOD_POS = [10, 90], BED_POS = [75, 88], OWNER_POS = [50, 92], LITTER_POS = [10, 92];
+const FOOD_POS = clampToWalkable(10, 90), BED_POS = clampToWalkable(75, 88), OWNER_POS = clampToWalkable(50, 92), LITTER_POS = clampToWalkable(10, 92);
 
 function updatePosition(pos, action, otherPos) {
   let [x, y] = pos;
   const [ox, oy] = otherPos;
   const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 
-  // Walking moves left, exploring moves right
-  if (action === 'explore') { x += ri(5, 15); y += ri(-3, 3); }
-  else if (action === 'rub' || action === 'ignore') { x -= ri(5, 15); y += ri(-3, 3); }
+  // Walking: mostly left, but go right (as exploring) when too far left
+  if (action === 'rub' || action === 'ignore') {
+    const goRight = x < 20 ? 0.8 : x < 40 ? 0.4 : 0.15;
+    if (Math.random() < goRight) {
+      x += ri(5, 15); y += ri(-3, 3);
+      lastMoveDir = 'right';
+    } else {
+      x -= ri(5, 15); y += ri(-3, 3);
+      lastMoveDir = 'left';
+    }
+  } else if (action === 'explore') { x += ri(5, 15); y += ri(-3, 3); lastMoveDir = 'right'; }
   else if (action === 'use_litter') { x = LITTER_POS[0] + ri(-3,3); y = LITTER_POS[1] + ri(-3,3); }
 
-  return [Math.max(3, Math.min(90, x)), Math.max(83, Math.min(97, y))];
+  return clampToWalkable(x, y);
 }
 
 // ============================================================
@@ -1601,8 +1609,8 @@ const TIME_SCALE = 1;
 let litterDirty = 0;
 
 const gameCats = [
-  { state: new CatState(), memory: new CatMemory(), pos: [30, 90] },
-  { state: new CatState(), memory: new CatMemory(), pos: [70, 90] },
+  { state: new CatState(), memory: new CatMemory(), pos: clampToWalkable(30, 90) },
+  { state: new CatState(), memory: new CatMemory(), pos: clampToWalkable(70, 90) },
 ];
 gameCats[0].state.boldness = 0.8;
 gameCats[0].state.affection = 0.9;
@@ -1723,7 +1731,7 @@ function tickAndRefresh() {
 const CACHE_VERSION = 5;
 let selectedCat = 0;
 let catMoods = ['content', 'content'];
-let catPositions = [[30, 55], [70, 45]];
+let catPositions = [clampToWalkable(30, 90), clampToWalkable(70, 90)];
 let speechTimers = [null, null];
 let currentLang = localStorage.getItem('catLang') || 'en';
 let currentSpeed = parseInt(localStorage.getItem('catSpeed')) || 1;
@@ -1732,6 +1740,7 @@ let busy = false;
 let prevTraits = [{}, {}];
 let activeAction = '';  // current action for sprite display
 let actionTimer = null; // timer to clear action after movement
+let lastMoveDir = 'left'; // last movement direction for sprite selection
 
 const I18N = {
   th: {
@@ -2075,7 +2084,7 @@ function doRebirth() {
   gameCats[0].state.affection = 0.9;
   gameCats[0].state.appetite = 0.7;
   gameCats[0].memory = new CatMemory();
-  gameCats[0].pos = [30, 78];
+  gameCats[0].pos = clampToWalkable(30, 90);
 
   litterDirty = 0;
   virtualStartReal = Date.now() / 1000;
@@ -2251,7 +2260,8 @@ function updateUI(data) {
       const isExploring = effectiveAction === 'explore';
       const isPurring = effectiveAction === 'purr';
       const isHissing = effectiveAction === 'hiss';
-      const isWalking = ['rub','ignore'].includes(effectiveAction);
+      const isWalking = ['rub','ignore'].includes(effectiveAction) && lastMoveDir === 'left';
+      const isExploringWalk = ['rub','ignore'].includes(effectiveAction) && lastMoveDir === 'right';
       const SPRITE_MAP = {
         sleeping: { src: 'sprites/cat_sleeping.apng', w: '49px' },
         eating:   { src: 'sprites/cat_eating.apng',   w: '56px' },
@@ -2262,7 +2272,7 @@ function updateUI(data) {
         walking:  { src: 'sprites/cat_walking.apng',  w: '44px' },
         idle:     { src: 'sprites/cat_idle.apng',     w: '50px' },
       };
-      const key = isSleeping ? 'sleeping' : isEating ? 'eating' : isPlaying ? 'playing' : isExploring ? 'exploring' : isPurring ? 'purring' : isHissing ? 'hissing' : isWalking ? 'walking' : 'idle';
+      const key = isSleeping ? 'sleeping' : isEating ? 'eating' : isPlaying ? 'playing' : (isExploring || isExploringWalk) ? 'exploring' : isPurring ? 'purring' : isHissing ? 'hissing' : isWalking ? 'walking' : 'idle';
       sprite.src = SPRITE_MAP[key].src;
       sprite.style.width = SPRITE_MAP[key].w;
       sprite.style.display = '';
