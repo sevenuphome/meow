@@ -1585,8 +1585,9 @@ function updatePosition(pos, action, otherPos) {
   const [ox, oy] = otherPos;
   const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 
-  // Only walking/explore actions move the cat
-  if (action === 'explore') { x = ri(5,90); y = ri(84,95); }
+  // Walking moves left, exploring moves right
+  if (action === 'explore') { x += ri(5, 15); y += ri(-3, 3); }
+  else if (action === 'rub' || action === 'ignore') { x -= ri(5, 15); y += ri(-3, 3); }
   else if (action === 'use_litter') { x = LITTER_POS[0] + ri(-3,3); y = LITTER_POS[1] + ri(-3,3); }
 
   return [Math.max(3, Math.min(90, x)), Math.max(83, Math.min(97, y))];
@@ -1729,6 +1730,8 @@ let currentSpeed = parseInt(localStorage.getItem('catSpeed')) || 1;
 let catNames = [null, null];
 let busy = false;
 let prevTraits = [{}, {}];
+let activeAction = '';  // current action for sprite display
+let actionTimer = null; // timer to clear action after movement
 
 const I18N = {
   th: {
@@ -2240,13 +2243,15 @@ function updateUI(data) {
     const sprite = document.getElementById('sprite-' + i);
     const catArea = document.getElementById('cat-' + i).closest('.cat-area');
     if (sprite && catArea) {
-      const isSleeping = c.mood === 'sleepy' || c.cat_action === 'nap';
-      const isEating = c.cat_action === 'eat';
-      const isPlaying = c.cat_action === 'play_alone';
-      const isExploring = c.cat_action === 'explore';
-      const isPurring = c.cat_action === 'purr';
-      const isHissing = c.cat_action === 'hiss';
-      const isWalking = ['rub','ignore'].includes(c.cat_action);
+      // Use activeAction to keep movement sprite during CSS transition
+      const effectiveAction = activeAction || c.cat_action;
+      const isSleeping = c.mood === 'sleepy' || effectiveAction === 'nap';
+      const isEating = effectiveAction === 'eat';
+      const isPlaying = effectiveAction === 'play_alone';
+      const isExploring = effectiveAction === 'explore';
+      const isPurring = effectiveAction === 'purr';
+      const isHissing = effectiveAction === 'hiss';
+      const isWalking = ['rub','ignore'].includes(effectiveAction);
       const SPRITE_MAP = {
         sleeping: { src: 'sprites/cat_sleeping.apng', w: '49px' },
         eating:   { src: 'sprites/cat_eating.apng',   w: '56px' },
@@ -2267,9 +2272,17 @@ function updateUI(data) {
       const [nx, ny] = c.pos;
       const [ox, oy] = catPositions[i];
       const roomCat = document.getElementById('room-cat-' + i);
-      if (Math.abs(nx - ox) > 2 || Math.abs(ny - oy) > 2) {
+      const moved = Math.abs(nx - ox) > 2 || Math.abs(ny - oy) > 2;
+      if (moved) {
         roomCat.classList.add('walking');
         setTimeout(() => roomCat.classList.remove('walking'), 1500);
+        // Keep the current action sprite showing during movement
+        const movAction = c.cat_action || '';
+        if (['rub','ignore','explore'].includes(movAction)) {
+          activeAction = movAction;
+          if (actionTimer) clearTimeout(actionTimer);
+          actionTimer = setTimeout(() => { activeAction = ''; actionTimer = null; }, 1500);
+        }
       }
       roomCat.style.left = nx + '%';
       roomCat.style.top = ny + '%';
